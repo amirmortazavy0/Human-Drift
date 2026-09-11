@@ -11,7 +11,7 @@ import {
 import {
   BarChart3, TrendingUp, TrendingDown, Minus, Clock,
   Calendar, Award, Target, Flame, ArrowRight, Activity,
-  SlidersHorizontal, CheckCircle2, Shield
+  SlidersHorizontal, CheckCircle2, Shield, Navigation, MapPin
 } from 'lucide-react';
 
 interface AnalyticsViewProps {
@@ -32,51 +32,63 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
   const [trend, setTrend] = useState<TrendAnalysis | null>(null);
   const [dwell, setDwell] = useState<DwellAnalysis[]>([]);
 
-  // Q1 Interactive calculator state
-  const [q1FromStation, setQ1FromStation] = useState<string>('');
-  const [q1ToStation, setQ1ToStation] = useState<string>('');
-  const [q1Result, setQ1Result] = useState<{
+  // Duration calculator state (Origin to Destination)
+  const [calcFromStation, setCalcFromStation] = useState<string>('');
+  const [calcToStation, setCalcToStation] = useState<string>('');
+  const [calcResult, setCalcResult] = useState<{
     count: number;
     avg_minutes: number | null;
     min_minutes: number | null;
     max_minutes: number | null;
   } | null>(null);
-  const [loadingQ1, setLoadingQ1] = useState(false);
+  const [loadingCalc, setLoadingCalc] = useState(false);
 
-  // Q5 Interactive live travel time estimator state
-  const [q5Station, setQ5Station] = useState<string>('');
-  const [q5Result, setQ5Result] = useState<EstimateRemaining | null>(null);
-  const [loadingQ5, setLoadingQ5] = useState(false);
+  // Real travel time remaining estimator state (Current to Destination)
+  const [estCurrentStation, setEstCurrentStation] = useState<string>('');
+  const [estDestStation, setEstDestStation] = useState<string>('');
+  const [estResult, setEstResult] = useState<EstimateRemaining | null>(null);
+  const [loadingEst, setLoadingEst] = useState(false);
 
   useEffect(() => {
-    if (routes.length > 0 && !activeRoute) {
-      setActiveRoute(routes[0]);
+    if (routes.length > 0) {
+      if (!activeRoute || !routes.some((r) => r.id === activeRoute.id)) {
+        setActiveRoute(routes[0]);
+      }
     }
   }, [routes]);
 
+  const sortedStations = activeRoute
+    ? [...activeRoute.stations].sort((a, b) => a.sequence - b.sequence)
+    : [];
+
+  const directionalStations = direction === 'B_TO_A'
+    ? [...sortedStations].reverse()
+    : sortedStations;
+
   useEffect(() => {
-    if (activeRoute && activeRoute.stations.length >= 2) {
-      setQ1FromStation(activeRoute.stations[0].id);
-      setQ1ToStation(activeRoute.stations[activeRoute.stations.length - 1].id);
-      setQ5Station(activeRoute.stations[0].id);
+    if (directionalStations.length >= 2) {
+      setCalcFromStation(directionalStations[0].id);
+      setCalcToStation(directionalStations[directionalStations.length - 1].id);
+      setEstCurrentStation(directionalStations[0].id);
+      setEstDestStation(directionalStations[directionalStations.length - 1].id);
     }
-  }, [activeRoute]);
+  }, [activeRoute?.id, direction]);
 
   useEffect(() => {
     loadAnalytics();
-  }, [direction, includeLowConfidence]);
+  }, [direction, includeLowConfidence, activeRoute?.id]);
 
   useEffect(() => {
-    if (q1FromStation && q1ToStation) {
-      calculateQ1();
+    if (calcFromStation && calcToStation) {
+      calculateDuration();
     }
-  }, [q1FromStation, q1ToStation, includeLowConfidence]);
+  }, [calcFromStation, calcToStation, includeLowConfidence]);
 
   useEffect(() => {
-    if (q5Station) {
-      calculateQ5();
+    if (estCurrentStation) {
+      calculateEstimate();
     }
-  }, [q5Station, direction]);
+  }, [estCurrentStation, estDestStation, direction, activeRoute?.id]);
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -103,65 +115,95 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
     }
   };
 
-  const calculateQ1 = async () => {
-    if (!q1FromStation || !q1ToStation) return;
-    setLoadingQ1(true);
+  const calculateDuration = async () => {
+    if (!calcFromStation || !calcToStation) return;
+    setLoadingCalc(true);
     try {
-      const res = await getAnalyticsDuration(q1FromStation, q1ToStation);
-      setQ1Result(res);
+      const res = await getAnalyticsDuration(calcFromStation, calcToStation);
+      setCalcResult(res);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingQ1(false);
+      setLoadingCalc(false);
     }
   };
 
-  const calculateQ5 = async () => {
-    if (!q5Station) return;
-    setLoadingQ5(true);
+  const calculateEstimate = async () => {
+    if (!estCurrentStation) return;
+    setLoadingEst(true);
     try {
-      const res = await getAnalyticsEstimate(q5Station, direction);
-      setQ5Result(res);
+      const res = await getAnalyticsEstimate(estCurrentStation, direction, estDestStation || undefined);
+      setEstResult(res);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingQ5(false);
+      setLoadingEst(false);
     }
   };
 
   if (!activeRoute) {
     return (
-      <div className="text-stone-400 text-sm text-center py-12">
-        No active route configured yet.
+      <div className="text-stone-400 text-sm text-center py-16 bg-stone-900 border border-stone-800 rounded-2xl">
+        No active commute route configured yet. Create a route to start tracking analytics.
       </div>
     );
   }
 
-  const sortedStations = [...activeRoute.stations].sort((a, b) => a.sequence - b.sequence);
+  // Downstream stations for the estimator destination dropdown
+  const currEstIdx = directionalStations.findIndex((s) => s.id === estCurrentStation);
+  const downstreamStations = currEstIdx >= 0
+    ? directionalStations.slice(currEstIdx + 1)
+    : directionalStations;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 pb-12">
-      {/* Top Header & Toggles */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Performance Analytics (Q1–Q9)
-          </h1>
-          <p className="text-stone-400 text-sm mt-0.5">
-            Empirical commute telemetry derived purely from your logged sessions
-          </p>
+      {/* Top Header */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Commute Analytics & Insights
+            </h1>
+            <p className="text-stone-400 text-xs sm:text-sm mt-0.5">
+              Empirical commute performance metrics derived purely from your logged sessions.
+            </p>
+          </div>
+
+          {/* Route Switcher (if multiple routes) */}
+          {routes.length > 1 && (
+            <div className="flex items-center gap-1 bg-stone-900 border border-stone-800 p-1 rounded-xl">
+              {routes.map((r) => {
+                const isSelected = r.id === activeRoute.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setActiveRoute(r)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                        : 'text-stone-400 hover:text-stone-200'
+                    }`}
+                  >
+                    {r.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Global Controls */}
-        <div className="flex flex-wrap items-center gap-3 bg-stone-900 border border-stone-800 p-2 rounded-xl text-xs">
-          <div className="flex items-center gap-1">
+        {/* Direction and Filter Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-stone-900 border border-stone-800 p-3 rounded-2xl shadow-sm text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="text-stone-400 font-mono uppercase text-[10px] mr-1">Direction:</span>
             <button
               type="button"
               onClick={() => setDirection('A_TO_B')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-colors ${
                 direction === 'A_TO_B'
-                  ? 'bg-amber-500 text-stone-950 font-bold'
-                  : 'text-stone-400 hover:text-stone-200'
+                  ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                  : 'text-stone-400 hover:text-stone-200 bg-stone-950/60'
               }`}
             >
               {activeRoute.direction_a} → {activeRoute.direction_b}
@@ -169,44 +211,44 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
             <button
               type="button"
               onClick={() => setDirection('B_TO_A')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-colors ${
                 direction === 'B_TO_A'
-                  ? 'bg-amber-500 text-stone-950 font-bold'
-                  : 'text-stone-400 hover:text-stone-200'
+                  ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                  : 'text-stone-400 hover:text-stone-200 bg-stone-950/60'
               }`}
             >
               {activeRoute.direction_b} → {activeRoute.direction_a}
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-stone-300 cursor-pointer pl-2 border-l border-stone-800">
+          <label className="flex items-center gap-2 text-stone-300 cursor-pointer pl-2">
             <input
               type="checkbox"
               checked={includeLowConfidence}
               onChange={(e) => setIncludeLowConfidence(e.target.checked)}
               className="accent-amber-500 rounded"
             />
-            <span>Include score 1 (uncertain)</span>
+            <span className="text-xs text-stone-400">Include low-confidence logs</span>
           </label>
         </div>
       </div>
 
-      {/* Q9: Program Progress Card */}
+      {/* Program Progress: 30-Day Commute Study */}
       {progress && (
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-5">
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
               <Target className="w-4 h-4" />
-              <span>Q9 — Program Study Completion</span>
+              <span>30-Day Commute Program Completion</span>
             </div>
             <span className="text-xs font-mono text-stone-400">
               Target: {progress.target_days} sessions
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-stone-950 border border-stone-800/80 p-4 rounded-xl">
-              <span className="text-stone-500 text-xs font-mono uppercase tracking-wider">
+              <span className="text-stone-400 text-xs font-mono uppercase tracking-wider">
                 Completed
               </span>
               <div className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">
@@ -218,7 +260,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
             </div>
 
             <div className="bg-stone-950 border border-stone-800/80 p-4 rounded-xl">
-              <span className="text-stone-500 text-xs font-mono uppercase tracking-wider">
+              <span className="text-stone-400 text-xs font-mono uppercase tracking-wider">
                 Current Streak
               </span>
               <div className="text-2xl sm:text-3xl font-bold font-mono text-amber-400 mt-1 flex items-center gap-1.5">
@@ -226,31 +268,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
                 <span>{progress.streak} days</span>
               </div>
               <span className="text-[11px] text-stone-400 font-mono mt-0.5 block">
-                Consecutive logs
+                Consecutive commute logs
               </span>
             </div>
 
             <div className="bg-stone-950 border border-stone-800/80 p-4 rounded-xl">
-              <span className="text-stone-500 text-xs font-mono uppercase tracking-wider">
+              <span className="text-stone-400 text-xs font-mono uppercase tracking-wider">
                 Days Remaining
               </span>
               <div className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">
                 {progress.days_remaining}
               </div>
               <span className="text-[11px] text-stone-400 font-mono mt-0.5 block">
-                To complete study
+                To reach target goal
               </span>
             </div>
 
             <div className="bg-stone-950 border border-stone-800/80 p-4 rounded-xl">
-              <span className="text-stone-500 text-xs font-mono uppercase tracking-wider">
+              <span className="text-stone-400 text-xs font-mono uppercase tracking-wider">
                 Days Elapsed
               </span>
               <div className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">
                 {progress.days_elapsed}
               </div>
               <span className="text-[11px] text-stone-400 font-mono mt-0.5 block">
-                Since study launch
+                Since program start
               </span>
             </div>
           </div>
@@ -263,7 +305,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
                 style={{ width: `${progress.completion_pct}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-xs text-stone-500 font-mono">
+            <div className="flex items-center justify-between text-xs text-stone-400 font-mono">
               <span>Day 1</span>
               <span>Day {progress.target_days}</span>
             </div>
@@ -271,16 +313,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         </div>
       )}
 
-      {/* Q8: 30-Day Trend Analysis */}
+      {/* Performance Trend Analysis */}
       {trend && (
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
               <Activity className="w-4 h-4" />
-              <span>Q8 — 30-Day Line Performance Trend</span>
+              <span>Overall Performance Trend</span>
             </div>
             <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-full text-xs font-bold font-mono flex items-center gap-1.5 ${
                 trend.trend === 'IMPROVING'
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : trend.trend === 'DEGRADING'
@@ -295,13 +337,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
             </span>
           </div>
 
-          <p className="text-stone-300 text-sm">{trend.description}</p>
+          <p className="text-stone-300 text-xs sm:text-sm">{trend.description}</p>
 
           {trend.weeks.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               {trend.weeks.map((w) => (
-                <div key={w.week} className="bg-stone-950 border border-stone-800/80 p-3 rounded-lg">
-                  <span className="text-xs font-mono text-stone-500">Week {w.week}</span>
+                <div key={w.week} className="bg-stone-950 border border-stone-800/80 p-3.5 rounded-xl">
+                  <span className="text-xs font-mono text-stone-400">Week {w.week}</span>
                   <div className="text-lg font-mono font-bold text-white mt-0.5">
                     {w.avg_delay_minutes > 0 ? `+${w.avg_delay_minutes}m` : `${w.avg_delay_minutes}m`}
                   </div>
@@ -315,24 +357,29 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         </div>
       )}
 
-      {/* Q1: Station to Station Duration Calculator */}
-      <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-5">
-        <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
-          <Clock className="w-4 h-4" />
-          <span>Q1 — How long does it actually take from Station X to Station Y?</span>
+      {/* Station to Station Duration Calculator */}
+      <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
+        <div>
+          <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
+            <Clock className="w-4 h-4" />
+            <span>Station-to-Station Duration Calculator</span>
+          </div>
+          <p className="text-xs text-stone-400 mt-1">
+            Calculate empirical average travel times, fastest runs, and slowest runs between any two stations.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-mono text-stone-400 mb-1.5">
-              Origin Station (X)
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase tracking-wider font-mono text-stone-400">
+              Origin Station
             </label>
             <select
-              value={q1FromStation}
-              onChange={(e) => setQ1FromStation(e.target.value)}
-              className="w-full bg-stone-950 border border-stone-800 rounded-lg p-3 text-white text-sm"
+              value={calcFromStation}
+              onChange={(e) => setCalcFromStation(e.target.value)}
+              className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500"
             >
-              {sortedStations.map((s) => (
+              {directionalStations.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -340,16 +387,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-mono text-stone-400 mb-1.5">
-              Destination Station (Y)
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase tracking-wider font-mono text-stone-400">
+              Destination Station
             </label>
             <select
-              value={q1ToStation}
-              onChange={(e) => setQ1ToStation(e.target.value)}
-              className="w-full bg-stone-950 border border-stone-800 rounded-lg p-3 text-white text-sm"
+              value={calcToStation}
+              onChange={(e) => setCalcToStation(e.target.value)}
+              className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500"
             >
-              {sortedStations.map((s) => (
+              {directionalStations.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -358,46 +405,46 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
           </div>
         </div>
 
-        {/* Q1 Results Display */}
+        {/* Results Display */}
         <div className="bg-stone-950 border border-stone-800 rounded-xl p-4">
-          {loadingQ1 ? (
-            <div className="text-xs text-stone-500 py-2 font-mono">Computing telemetry...</div>
-          ) : !q1Result || q1Result.count === 0 ? (
+          {loadingCalc ? (
+            <div className="text-xs text-stone-400 py-2 font-mono">Computing duration telemetry...</div>
+          ) : !calcResult || calcResult.count === 0 ? (
             <div className="text-xs text-stone-400 italic py-2">
-              No qualifying sessions recorded between these two stations yet.
+              No completed sessions recorded between these two stations yet.
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-500">
+                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-400">
                   Average Travel Time
                 </span>
                 <div className="text-2xl font-mono font-bold text-amber-400 mt-0.5">
-                  {q1Result.avg_minutes} mins
+                  {calcResult.avg_minutes} mins
                 </div>
               </div>
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-500">
-                  Fastest Trip
+                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-400">
+                  Fastest Run
                 </span>
                 <div className="text-2xl font-mono font-bold text-emerald-400 mt-0.5">
-                  {q1Result.min_minutes} mins
+                  {calcResult.min_minutes} mins
                 </div>
               </div>
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-500">
-                  Slowest Trip
+                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-400">
+                  Slowest Run
                 </span>
-                <div className="text-2xl font-mono font-bold text-red-400 mt-0.5">
-                  {q1Result.max_minutes} mins
+                <div className="text-2xl font-mono font-bold text-rose-400 mt-0.5">
+                  {calcResult.max_minutes} mins
                 </div>
               </div>
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-500">
-                  Data Sample Size
+                <span className="text-[11px] uppercase tracking-wider font-mono text-stone-400">
+                  Sample Size
                 </span>
                 <div className="text-2xl font-mono font-bold text-white mt-0.5">
-                  {q1Result.count} logs
+                  {calcResult.count} runs
                 </div>
               </div>
             </div>
@@ -405,19 +452,19 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         </div>
       </div>
 
-      {/* Q2: Ranked Segments Bottlenecks */}
-      <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+      {/* Segment Delay Bottlenecks & Variance */}
+      <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
         <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
           <BarChart3 className="w-4 h-4" />
-          <span>Q2 — Which segment causes the most delay & variance?</span>
+          <span>Segment Delay Bottlenecks & Variance</span>
         </div>
         <p className="text-xs text-stone-400">
-          Ranked list of consecutive segments by average duration and standard deviation (spread)
+          Ranked list of consecutive segments by average duration and standard deviation (variance spread).
         </p>
 
         {segments.length === 0 ? (
-          <div className="text-xs text-stone-500 italic py-3">
-            Accumulating segment data. Complete at least one multi-station session.
+          <div className="text-xs text-stone-400 italic py-3">
+            Accumulating segment data. Complete at least one multi-station commute session.
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -436,7 +483,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
                       <ArrowRight className="w-3.5 h-3.5 text-stone-500 shrink-0" />
                       <span>{seg.to_station_name}</span>
                     </div>
-                    <span className="text-[11px] text-stone-500 font-mono">
+                    <span className="text-[11px] text-stone-400 font-mono">
                       Sample: {seg.count} sessions • Variance spread: ±{seg.std_dev_minutes}m
                     </span>
                   </div>
@@ -447,8 +494,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
                     <div className="text-base font-bold text-amber-400">
                       {seg.avg_duration_minutes}m
                     </div>
-                    <div className="text-[11px] text-stone-500">
-                      Range: {seg.min_duration_minutes}m - {seg.max_duration_minutes}m
+                    <div className="text-[11px] text-stone-400">
+                      range: {seg.min_duration_minutes}–{seg.max_duration_minutes}m
                     </div>
                   </div>
                 </div>
@@ -458,18 +505,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         )}
       </div>
 
-      {/* Q3 & Q4: Reliability Tables */}
+      {/* Timetable Schedule Reliability & Day of Week */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Q3 Departures */}
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        {/* Scheduled Departures Reliability */}
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
             <Clock className="w-4 h-4" />
-            <span>Q3 — Scheduled Departures Reliability</span>
+            <span>Timetable Schedule Punctuality</span>
           </div>
 
           {departures.length === 0 ? (
-            <div className="text-xs text-stone-500 italic py-3">
-              No sessions linked to scheduled departure timetables yet.
+            <div className="text-xs text-stone-400 italic py-3">
+              No sessions tied to scheduled timetables recorded yet.
             </div>
           ) : (
             <div className="space-y-2">
@@ -482,10 +529,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
                     <div className="font-mono text-sm font-bold text-white">
                       {d.departure_time} → {d.arrival_time}
                     </div>
-                    <span className="text-[11px] text-stone-400 font-sans">{d.label}</span>
+                    <span className="text-[11px] text-stone-400 font-sans">{d.label || 'Scheduled Train'}</span>
                   </div>
                   <div className="text-right font-mono">
-                    <div className="text-sm font-bold text-amber-400">
+                    <div className={`text-sm font-bold ${d.avg_delay_minutes > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                       {d.avg_delay_minutes > 0 ? `+${d.avg_delay_minutes}m` : `${d.avg_delay_minutes}m`}
                     </div>
                     <span className="text-[11px] text-emerald-400">
@@ -498,11 +545,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
           )}
         </div>
 
-        {/* Q4 Days of Week */}
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        {/* Day of Week Commute Reliability */}
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
             <Calendar className="w-4 h-4" />
-            <span>Q4 — Day of Week Reliability</span>
+            <span>Day-of-Week Commute Reliability</span>
           </div>
 
           <div className="space-y-2">
@@ -513,15 +560,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-stone-200">{d.day_name}</span>
-                  <span className="text-[10px] text-stone-500 font-mono">({d.session_count})</span>
+                  <span className="text-[10px] text-stone-400 font-mono">({d.session_count})</span>
                 </div>
                 <div className="font-mono text-xs">
                   {d.session_count === 0 ? (
-                    <span className="text-stone-600">No data</span>
+                    <span className="text-stone-400">No data</span>
                   ) : (
                     <span
                       className={`font-bold ${
-                        d.avg_delay_minutes > 0 ? 'text-red-400' : 'text-emerald-400'
+                        d.avg_delay_minutes > 0 ? 'text-rose-400' : 'text-emerald-400'
                       }`}
                     >
                       {d.avg_delay_minutes > 0
@@ -536,62 +583,101 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         </div>
       </div>
 
-      {/* Q5: Real travel time estimator & Q7: Dwell Times */}
+      {/* Real Travel Time Remaining Estimator & Platform Dwell Times */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Q5 Live Estimator */}
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        {/* Real Travel Time Remaining Estimator (Origin & Destination Selectable!) */}
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
             <Activity className="w-4 h-4" />
-            <span>Q5 — Real Travel Time Remaining Estimator</span>
+            <span>Real Travel Time Remaining Estimator</span>
           </div>
           <p className="text-xs text-stone-400">
-            Given the train's current station, project remaining time to destination using historical segment baselines.
+            Project remaining journey duration from your current boarding station to your chosen destination station using historical segment averages.
           </p>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-mono text-stone-500 mb-1">
-              Current Station
-            </label>
-            <select
-              value={q5Station}
-              onChange={(e) => setQ5Station(e.target.value)}
-              className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2.5 text-white text-xs"
-            >
-              {sortedStations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider font-mono text-stone-400 mb-1">
+                Current Station
+              </label>
+              <select
+                value={estCurrentStation}
+                onChange={(e) => setEstCurrentStation(e.target.value)}
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+              >
+                {directionalStations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider font-mono text-stone-400 mb-1">
+                Destination Station
+              </label>
+              <select
+                value={estDestStation}
+                onChange={(e) => setEstDestStation(e.target.value)}
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+              >
+                {directionalStations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {q5Result && (
-            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 text-center space-y-2">
-              <span className="text-xs text-stone-400 uppercase tracking-wider font-mono">
-                Estimated Time to {q5Result.destination_station_name}
+          {loadingEst ? (
+            <div className="p-4 text-center text-xs text-stone-400 font-mono">
+              Estimating travel time...
+            </div>
+          ) : estResult ? (
+            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 text-center space-y-3">
+              <span className="text-[11px] text-stone-400 uppercase tracking-wider font-mono">
+                {estResult.current_station_name || 'Origin'} → {estResult.destination_station_name}
               </span>
               <div className="text-3xl font-bold font-mono text-amber-400">
-                ~{q5Result.estimated_minutes} minutes
+                ~{estResult.estimated_minutes} minutes
               </div>
-              <p className="text-[11px] text-stone-500">
-                Across {q5Result.remaining_stations_count} remaining segments based on your historical averages.
+              <p className="text-[11px] text-stone-400">
+                {estResult.remaining_stations_count > 0
+                  ? `Calculated across ${estResult.remaining_stations_count} segments based on your historical averages.`
+                  : 'Destination must be downstream from current station.'}
               </p>
+
+              {estResult.segments_breakdown && estResult.segments_breakdown.length > 0 && (
+                <div className="pt-2 border-t border-stone-800/80 space-y-1.5 text-left">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-stone-400 block">
+                    Segment Breakdown:
+                  </span>
+                  {estResult.segments_breakdown.map((sb, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs font-mono text-stone-300">
+                      <span>{sb.from_name} → {sb.to_name}</span>
+                      <span className="text-amber-400 font-semibold">{sb.estimated_minutes}m</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Q7 Dwell Times */}
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        {/* Station Platform Dwell Times */}
+        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
             <Clock className="w-4 h-4" />
-            <span>Q7 — Station Dwell Times</span>
+            <span>Platform Station Dwell Times</span>
           </div>
           <p className="text-xs text-stone-400">
             Average duration trains remain stopped at intermediate platform stations.
           </p>
 
           {dwell.length === 0 ? (
-            <div className="text-xs text-stone-500 italic py-3">
+            <div className="text-xs text-stone-400 italic py-3">
               No station arrival and departure pairs recorded yet.
             </div>
           ) : (
@@ -599,13 +685,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
               {dwell.map((dw) => (
                 <div
                   key={dw.station_id}
-                  className="bg-stone-950 border border-stone-800/80 rounded-xl p-2.5 px-3 flex items-center justify-between"
+                  className="bg-stone-950 border border-stone-800/80 rounded-xl p-3 flex items-center justify-between"
                 >
-                  <span className="text-xs font-semibold text-white">{dw.station_name}</span>
-                  <div className="text-right font-mono text-xs">
-                    <span className="text-amber-400 font-bold">{dw.avg_dwell_seconds}s</span>
-                    <span className="text-stone-500 text-[10px] ml-2">
-                      ({dw.min_dwell_seconds}s - {dw.max_dwell_seconds}s)
+                  <div>
+                    <div className="text-xs font-semibold text-white">{dw.station_name}</div>
+                    <span className="text-[10px] text-stone-400 font-mono">
+                      Sample: {dw.count} stop{dw.count > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="text-right font-mono">
+                    <div className="text-sm font-bold text-amber-400">
+                      {Math.round(dw.avg_dwell_seconds)}s avg
+                    </div>
+                    <span className="text-[10px] text-stone-400">
+                      range: {Math.round(dw.min_dwell_seconds)}–{Math.round(dw.max_dwell_seconds)}s
                     </span>
                   </div>
                 </div>

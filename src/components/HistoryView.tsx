@@ -30,6 +30,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterDirection, setFilterDirection] = useState<string>('ALL');
+  const [filterRouteId, setFilterRouteId] = useState<string>('ALL');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [showRestDayModal, setShowRestDayModal] = useState(false);
   const [restDayDate, setRestDayDate] = useState(new Date().toISOString().split('T')[0]);
@@ -49,6 +50,21 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   if (filterDirection !== 'ALL') {
     filteredSessions = filteredSessions.filter((s) => s.direction === filterDirection);
   }
+  if (filterRouteId !== 'ALL') {
+    filteredSessions = filteredSessions.filter((s) => s.route_id === filterRouteId);
+  }
+
+  const getFormattedRestDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    } catch (e) {}
+    return dateStr;
+  };
 
   // Calculate duration and delay
   const calculateSessionMetrics = (session: Session) => {
@@ -157,7 +173,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-stone-900 border border-stone-800 rounded-xl p-3">
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {['ALL', 'COMPLETE', 'INCOMPLETE', 'CONFLICT'].map((st) => (
             <button
               key={st}
@@ -173,17 +189,37 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-stone-500 font-medium">Dir:</span>
-          <select
-            value={filterDirection}
-            onChange={(e) => setFilterDirection(e.target.value)}
-            className="bg-stone-950 border border-stone-800 text-stone-300 rounded px-2 py-1 text-xs"
-          >
-            <option value="ALL">All Directions</option>
-            <option value="A_TO_B">Outbound (A → B)</option>
-            <option value="B_TO_A">Inbound (B → A)</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          {routes.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-stone-500 font-medium">Route:</span>
+              <select
+                value={filterRouteId}
+                onChange={(e) => setFilterRouteId(e.target.value)}
+                className="bg-stone-950 border border-stone-800 text-stone-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
+              >
+                <option value="ALL">All Routes</option>
+                {routes.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-stone-500 font-medium">Dir:</span>
+            <select
+              value={filterDirection}
+              onChange={(e) => setFilterDirection(e.target.value)}
+              className="bg-stone-950 border border-stone-800 text-stone-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
+            >
+              <option value="ALL">All Directions</option>
+              <option value="A_TO_B">Outbound (A → B)</option>
+              <option value="B_TO_A">Inbound (B → A)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -292,31 +328,79 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
           <form
             onSubmit={handleSaveRestDay}
-            className="bg-stone-900 border border-stone-800 rounded-xl max-w-sm w-full p-5 space-y-4 shadow-2xl"
+            className="bg-stone-900 border border-stone-800 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl"
           >
-            <div className="flex items-center gap-2 text-amber-400">
-              <Coffee className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">Mark Rest Day</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-amber-400">
+                <span className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <Coffee className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-white">Mark Commute Rest Day</h3>
+                  <span className="text-[11px] text-stone-400">Protects study streak calculation</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRestDayModal(false)}
+                className="p-1.5 text-stone-500 hover:text-white rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
+
             <p className="text-xs text-stone-400 leading-relaxed">
-              Rest days explain non-commute days so streaks and program completion calculations remain fair.
+              Rest days explain non-commute days (weekends, remote work, sick leaves, holidays) so your study baseline and completion metrics remain accurate.
             </p>
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider font-mono text-stone-400 mb-1">
-                Date
-              </label>
+            {/* Quick date chips */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs uppercase tracking-wider font-mono text-stone-400">
+                  Select Date
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setRestDayDate(new Date().toISOString().split('T')[0])}
+                    className="text-[11px] font-mono py-0.5 px-2 bg-stone-800 hover:bg-stone-700 text-amber-400 rounded-md transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const y = new Date();
+                      y.setDate(y.getDate() - 1);
+                      setRestDayDate(y.toISOString().split('T')[0]);
+                    }}
+                    className="text-[11px] font-mono py-0.5 px-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-md transition-colors"
+                  >
+                    Yesterday
+                  </button>
+                </div>
+              </div>
+
               <input
                 type="date"
                 value={restDayDate}
                 onChange={(e) => setRestDayDate(e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white font-mono text-sm"
+                style={{ colorScheme: 'dark' }}
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-500"
                 required
               />
+
+              {/* Formatted Date Banner */}
+              {restDayDate && (
+                <div className="p-2 bg-stone-950 border border-stone-800/80 rounded-lg text-xs font-medium text-amber-300 flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{getFormattedRestDate(restDayDate)}</span>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider font-mono text-stone-400 mb-1">
+            <div className="space-y-1.5">
+              <label className="text-xs uppercase tracking-wider font-mono text-stone-400">
                 Reason (Optional)
               </label>
               <input
@@ -324,22 +408,22 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 placeholder="e.g. Remote work, holiday, illness, weekend"
                 value={restDayReason}
                 onChange={(e) => setRestDayReason(e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white text-xs"
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500"
               />
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-3 pt-3 border-t border-stone-800">
               <button
                 type="button"
                 onClick={() => setShowRestDayModal(false)}
-                className="flex-1 py-2 bg-stone-800 text-stone-300 text-xs font-semibold rounded-lg"
+                className="flex-1 min-h-[44px] py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs sm:text-sm font-semibold rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingRestDay}
-                className="flex-1 py-2 bg-amber-500 text-stone-950 text-xs font-bold rounded-lg disabled:opacity-50"
+                className="flex-1 min-h-[44px] py-2.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs sm:text-sm font-bold rounded-xl disabled:opacity-50 transition-colors shadow-lg shadow-amber-500/20"
               >
                 {savingRestDay ? 'Saving...' : 'Record Rest Day'}
               </button>

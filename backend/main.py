@@ -205,10 +205,59 @@ def update_route(route_id: str, payload: UpdateRouteRequest):
                 r.direction_b = payload.direction_b.strip()
             if payload.is_active is not None:
                 r.is_active = payload.is_active
+            if payload.stations is not None:
+                existing_stations_map = {st.name.strip().lower(): st.id for st in r.stations}
+                new_stations: List[Station] = []
+                for idx, st_in in enumerate(payload.stations):
+                    clean_st_name = st_in.name.strip()
+                    st_id = existing_stations_map.get(clean_st_name.lower(), f"st-{uuid4()}")
+                    new_stations.append(Station(
+                        id=st_id,
+                        route_id=route_id,
+                        name=clean_st_name,
+                        sequence=idx,
+                        notes=st_in.notes
+                    ))
+                r.stations = new_stations
+            if payload.schedules is not None:
+                data.schedules = [s for s in data.schedules if s.route_id != route_id]
+                now_iso = get_current_iso()
+                for sch_in in payload.schedules:
+                    sch_id = f"sch-{uuid4()}"
+                    deps = []
+                    for dep in sch_in.departures:
+                        deps.append(ScheduledDeparture(
+                            id=f"dep-{uuid4()}",
+                            schedule_id=sch_id,
+                            departure_time=dep.departure_time,
+                            arrival_time=dep.arrival_time,
+                            label=dep.label
+                        ))
+                    data.schedules.append(Schedule(
+                        id=sch_id,
+                        route_id=route_id,
+                        direction=sch_in.direction,
+                        season_label=sch_in.season_label,
+                        is_active=True,
+                        departures=deps,
+                        created_at=now_iso
+                    ))
             append_audit_log(data, "ROUTE_UPDATED", f"id:{r.id} name:{r.name}")
             write_app_data(data)
             return r
     raise HTTPException(status_code=404, detail="Route not found")
+
+@app.delete("/api/routes/{route_id}")
+def delete_route(route_id: str):
+    data = read_app_data()
+    target_route = next((r for r in data.routes if r.id == route_id), None)
+    if not target_route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    data.routes = [r for r in data.routes if r.id != route_id]
+    data.schedules = [s for s in data.schedules if s.route_id != route_id]
+    append_audit_log(data, "ROUTE_DELETED", f"id:{route_id} name:{target_route.name}")
+    write_app_data(data)
+    return {"status": "ok", "deleted_route_id": route_id}
 
 @app.get("/api/schedules", response_model=List[Schedule])
 def get_schedules(route_id: Optional[str] = None):
@@ -638,9 +687,13 @@ def analytics_duration(from_station_id: str, to_station_id: str):
     return calculate_duration_between_stations(data, from_station_id, to_station_id)
 
 @app.get("/api/analytics/estimate")
-def analytics_estimate(current_station_id: str, direction: str):
+def analytics_estimate(
+    current_station_id: str,
+    direction: str,
+    destination_station_id: Optional[str] = None
+):
     data = read_app_data()
-    return calculate_estimate_remaining(data, current_station_id, direction)
+    return calculate_estimate_remaining(data, current_station_id, direction, destination_station_id)
 
 # --- System Endpoints ---
 @app.get("/api/audit")

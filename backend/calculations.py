@@ -282,7 +282,8 @@ def calculate_days_reliability(app_data: AppData) -> List[Dict[str, Any]]:
 def calculate_estimate_remaining(
     app_data: AppData,
     current_station_id: str,
-    direction: str
+    direction: str,
+    destination_station_id: Optional[str] = None
 ) -> Dict[str, Any]:
     # Find route that has current station
     matched_route = None
@@ -306,10 +307,24 @@ def calculate_estimate_remaining(
         
     # Find index of current station in ordered list
     curr_idx = next((i for i, s in enumerate(ordered_stations) if s.id == current_station_id), None)
-    if curr_idx is None or curr_idx >= len(ordered_stations) - 1:
+    if curr_idx is None:
+        return {"error": "Current station not found on route"}
+
+    # Find index of destination station (default to terminal station if not provided)
+    if destination_station_id:
+        dest_idx = next((i for i, s in enumerate(ordered_stations) if s.id == destination_station_id), None)
+        if dest_idx is None:
+            dest_idx = len(ordered_stations) - 1
+    else:
+        dest_idx = len(ordered_stations) - 1
+
+    # Ensure destination is downstream of current station
+    if dest_idx <= curr_idx:
         return {
             "current_station_id": current_station_id,
-            "destination_station_name": ordered_stations[-1].name if ordered_stations else "Destination",
+            "current_station_name": ordered_stations[curr_idx].name,
+            "destination_station_id": ordered_stations[dest_idx].id,
+            "destination_station_name": ordered_stations[dest_idx].name,
             "estimated_minutes": 0,
             "remaining_stations_count": 0,
             "segments_breakdown": []
@@ -324,7 +339,7 @@ def calculate_estimate_remaining(
         for seg in calculate_segments_analysis(app_data, direction=direction, include_low_confidence=True)
     }
     
-    for i in range(curr_idx, len(ordered_stations) - 1):
+    for i in range(curr_idx, dest_idx):
         s_from = ordered_stations[i]
         s_to = ordered_stations[i+1]
         key = f"{s_from.id}-->{s_to.id}"
@@ -339,9 +354,10 @@ def calculate_estimate_remaining(
     return {
         "current_station_id": current_station_id,
         "current_station_name": ordered_stations[curr_idx].name,
-        "destination_station_name": ordered_stations[-1].name,
+        "destination_station_id": ordered_stations[dest_idx].id,
+        "destination_station_name": ordered_stations[dest_idx].name,
         "estimated_minutes": round(total_est_seconds / 60, 1),
-        "remaining_stations_count": len(ordered_stations) - 1 - curr_idx,
+        "remaining_stations_count": dest_idx - curr_idx,
         "segments_breakdown": remaining_segments
     }
 

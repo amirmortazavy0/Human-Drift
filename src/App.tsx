@@ -17,7 +17,7 @@ import { SettingsView } from './components/SettingsView';
 import {
   Train, Play, Clock, AlertTriangle, BarChart3,
   History, ShieldAlert, ScrollText, Settings, Award,
-  Flame, Target, CheckCircle2, ChevronRight, Plus, RefreshCw
+  Flame, Target, CheckCircle2, ChevronRight, Plus, RefreshCw, Edit3
 } from 'lucide-react';
 
 type Tab = 'HOME' | 'HISTORY' | 'ANALYTICS' | 'CONFLICTS' | 'AUDIT' | 'SETTINGS';
@@ -36,6 +36,7 @@ export default function App() {
 
   // Workflow states
   const [isSettingUpRoute, setIsSettingUpRoute] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [isSelectingDirection, setIsSelectingDirection] = useState(false);
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [isEndingSession, setIsEndingSession] = useState(false);
@@ -94,6 +95,7 @@ export default function App() {
     setRoutes((prev) => [...prev, newRoute]);
     setActiveRouteId(newRoute.id);
     setIsSettingUpRoute(false);
+    setEditingRoute(null);
     refreshAllData();
   };
 
@@ -139,14 +141,35 @@ export default function App() {
     );
   }
 
-  // 1. Initial Route Setup (Empty state — when no routes exist yet)
+  // 1. Initial Route Setup / Edit Route Flow
   if (routes.length === 0 || isSettingUpRoute) {
     return (
       <div className="min-h-screen bg-stone-950 text-stone-100 p-4 sm:p-8">
         <RouteSetup
           isInitial={routes.length === 0}
+          initialRoute={editingRoute || undefined}
+          initialSchedules={editingRoute ? schedules.filter((s) => s.route_id === editingRoute.id) : undefined}
           onRouteCreated={handleRouteCreated}
-          onCancel={routes.length > 0 ? () => setIsSettingUpRoute(false) : undefined}
+          onRouteUpdated={(updatedRoute) => {
+            setRoutes((prev) => prev.map((r) => (r.id === updatedRoute.id ? updatedRoute : r)));
+            setIsSettingUpRoute(false);
+            setEditingRoute(null);
+            refreshAllData();
+          }}
+          onRouteDeleted={(deletedId) => {
+            setRoutes((prev) => prev.filter((r) => r.id !== deletedId));
+            if (activeRouteId === deletedId) {
+              const remaining = routes.filter((r) => r.id !== deletedId);
+              setActiveRouteId(remaining.length > 0 ? remaining[0].id : null);
+            }
+            setIsSettingUpRoute(false);
+            setEditingRoute(null);
+            refreshAllData();
+          }}
+          onCancel={routes.length > 0 ? () => {
+            setIsSettingUpRoute(false);
+            setEditingRoute(null);
+          } : undefined}
         />
       </div>
     );
@@ -194,11 +217,18 @@ export default function App() {
     return (
       <div className="min-h-screen bg-stone-950 text-stone-100 p-4 sm:p-6">
         <DirectionSelect
+          routes={routes}
           route={activeRoute}
           schedules={schedules}
           existingSessions={sessions}
+          onSelectRoute={(newRouteId) => setActiveRouteId(newRouteId)}
           onSessionStarted={handleSessionStarted}
           onCancel={() => setIsSelectingDirection(false)}
+          onEditRoute={() => {
+            setEditingRoute(activeRoute);
+            setIsSettingUpRoute(true);
+            setIsSelectingDirection(false);
+          }}
         />
       </div>
     );
@@ -292,6 +322,55 @@ export default function App() {
         {/* Tab View Switching */}
         {activeTab === 'HOME' && (
           <div className="space-y-8">
+            {/* Route Switcher & Management */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-stone-900/80 border border-stone-800 p-2.5 rounded-2xl shadow-sm">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {routes.map((r) => {
+                  const isSel = r.id === activeRoute.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setActiveRouteId(r.id)}
+                      className={`py-1.5 px-3.5 rounded-xl text-xs font-semibold transition-all ${
+                        isSel
+                          ? 'bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20'
+                          : 'text-stone-400 hover:text-stone-200 bg-stone-950/60'
+                      }`}
+                    >
+                      {r.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingRoute(activeRoute);
+                    setIsSettingUpRoute(true);
+                  }}
+                  className="py-1.5 px-3 bg-stone-800 hover:bg-stone-700 text-amber-400 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Route</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingRoute(null);
+                    setIsSettingUpRoute(true);
+                  }}
+                  className="py-1.5 px-3 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  title="Add another route"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Route</span>
+                </button>
+              </div>
+            </div>
+
             {/* Primary Action Hero: Start Session Button */}
             <div className="bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
               <div className="space-y-2 max-w-md mx-auto">
@@ -301,8 +380,8 @@ export default function App() {
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
                   {activeRoute.name}
                 </h1>
-                <p className="text-stone-400 text-sm">
-                  Tap to log your departure, dwell times, and arrivals station by station.
+                <p className="text-stone-400 text-xs sm:text-sm">
+                  {activeRoute.direction_a} ↔ {activeRoute.direction_b} • {activeRoute.stations.length} platform stations
                 </p>
               </div>
 
@@ -487,7 +566,14 @@ export default function App() {
           <SettingsView
             routes={routes}
             schedules={schedules}
-            onCreateNewRoute={() => setIsSettingUpRoute(true)}
+            onCreateNewRoute={() => {
+              setEditingRoute(null);
+              setIsSettingUpRoute(true);
+            }}
+            onEditRoute={(rt) => {
+              setEditingRoute(rt);
+              setIsSettingUpRoute(true);
+            }}
             onSessionsReset={refreshAllData}
           />
         )}

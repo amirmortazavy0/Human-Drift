@@ -127,6 +127,8 @@ class UpdateRouteRequest(BaseModel):
     name: Optional[str] = None
     direction_a: Optional[str] = None
     direction_b: Optional[str] = None
+    stations: Optional[List[StationInput]] = None
+    schedules: Optional[List[ScheduleInput]] = None
     is_active: Optional[bool] = None
 
 class CreateSessionRequest(BaseModel):

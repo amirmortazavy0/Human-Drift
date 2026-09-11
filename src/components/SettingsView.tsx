@@ -3,13 +3,14 @@ import { Route, Schedule } from '../types';
 import { getHealth, resetSessions, markRestDay } from '../api';
 import {
   Settings, Download, RefreshCw, AlertTriangle, Coffee,
-  CheckCircle2, Plus, Server, HardDrive, ShieldAlert
+  CheckCircle2, Plus, Server, HardDrive, ShieldAlert, Edit3, Calendar
 } from 'lucide-react';
 
 interface SettingsViewProps {
   routes: Route[];
   schedules: Schedule[];
   onCreateNewRoute: () => void;
+  onEditRoute?: (route: Route) => void;
   onSessionsReset: () => void;
 }
 
@@ -17,6 +18,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   routes,
   schedules,
   onCreateNewRoute,
+  onEditRoute,
   onSessionsReset,
 }) => {
   const [health, setHealth] = useState<{ status: string; sessions: number; routes: number } | null>(null);
@@ -29,6 +31,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [restDayDate, setRestDayDate] = useState(new Date().toISOString().split('T')[0]);
   const [restDayReason, setRestDayReason] = useState('');
   const [restDaySuccess, setRestDaySuccess] = useState(false);
+
+  const getFormattedRestDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    } catch (e) {}
+    return dateStr;
+  };
 
   useEffect(() => {
     checkHealth();
@@ -159,13 +173,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             return (
               <div
                 key={rt.id}
-                className="bg-stone-950 border border-stone-800/80 rounded-xl p-4 space-y-2 text-xs"
+                className="bg-stone-950 border border-stone-800/80 rounded-xl p-4 space-y-3 text-xs"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white">{rt.name}</h3>
-                  <span className="font-mono text-stone-500 text-[11px]">
-                    {sorted.length} stations
-                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{rt.name}</h3>
+                    <span className="text-[11px] text-stone-400">
+                      {rt.direction_a} ↔ {rt.direction_b}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-stone-500 text-[11px]">
+                      {sorted.length} stations
+                    </span>
+                    {onEditRoute && (
+                      <button
+                        type="button"
+                        onClick={() => onEditRoute(rt)}
+                        className="flex items-center gap-1 py-1 px-2.5 bg-stone-800 hover:bg-stone-700 text-amber-400 rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="text-stone-300 font-mono text-[11px] flex flex-wrap items-center gap-1">
@@ -179,7 +209,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   ))}
                 </div>
 
-                <div className="pt-2 text-stone-500 text-[11px]">
+                <div className="pt-1 text-stone-500 text-[11px]">
                   {rtSchedules.length} scheduled timetable{rtSchedules.length === 1 ? '' : 's'} linked
                 </div>
               </div>
@@ -205,27 +235,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleMarkRestDay} className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="date"
-            value={restDayDate}
-            onChange={(e) => setRestDayDate(e.target.value)}
-            className="bg-stone-950 border border-stone-800 rounded-lg px-3 py-2 text-white font-mono text-xs"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Reason (optional)"
-            value={restDayReason}
-            onChange={(e) => setRestDayReason(e.target.value)}
-            className="flex-1 bg-stone-950 border border-stone-800 rounded-lg px-3 py-2 text-white text-xs"
-          />
-          <button
-            type="submit"
-            className="py-2 px-4 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold rounded-lg transition-colors shrink-0"
-          >
-            Record Rest Day
-          </button>
+        <form onSubmit={handleMarkRestDay} className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="date"
+              value={restDayDate}
+              onChange={(e) => setRestDayDate(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+              className="bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Reason (e.g. remote work, holiday, illness, weekend)"
+              value={restDayReason}
+              onChange={(e) => setRestDayReason(e.target.value)}
+              className="flex-1 bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
+            />
+            <button
+              type="submit"
+              className="py-2.5 px-5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold rounded-xl transition-colors shrink-0 shadow-md shadow-amber-500/20"
+            >
+              Record Rest Day
+            </button>
+          </div>
+          {restDayDate && (
+            <div className="text-[11px] font-medium text-amber-400/90 flex items-center gap-1.5 pl-1">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{getFormattedRestDate(restDayDate)}</span>
+            </div>
+          )}
         </form>
       </div>
 

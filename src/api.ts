@@ -45,6 +45,12 @@ export async function updateRoute(id: string, payload: {
   direction_a?: string;
   direction_b?: string;
   is_active?: boolean;
+  stations?: { name: string; sequence?: number; notes?: string | null }[];
+  schedules?: {
+    direction: string;
+    season_label: string;
+    departures: { departure_time: string; arrival_time: string; label?: string | null }[];
+  }[];
 }): Promise<Route> {
   const res = await fetch(`${API_BASE}/routes/${id}`, {
     method: 'PUT',
@@ -52,6 +58,14 @@ export async function updateRoute(id: string, payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to update route: ${res.statusText}`);
+  return res.json();
+}
+
+export async function deleteRoute(id: string): Promise<{ status: string; deleted_route_id: string }> {
+  const res = await fetch(`${API_BASE}/routes/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete route: ${res.statusText}`);
   return res.json();
 }
 
@@ -277,8 +291,16 @@ export async function getAnalyticsDuration(fromStationId: string, toStationId: s
   return res.json();
 }
 
-export async function getAnalyticsEstimate(currentStationId: string, direction: string): Promise<EstimateRemaining> {
-  const res = await fetch(`${API_BASE}/analytics/estimate?current_station_id=${encodeURIComponent(currentStationId)}&direction=${encodeURIComponent(direction)}`);
+export async function getAnalyticsEstimate(
+  currentStationId: string,
+  direction: string,
+  destinationStationId?: string
+): Promise<EstimateRemaining> {
+  let url = `${API_BASE}/analytics/estimate?current_station_id=${encodeURIComponent(currentStationId)}&direction=${encodeURIComponent(direction)}`;
+  if (destinationStationId) {
+    url += `&destination_station_id=${encodeURIComponent(destinationStationId)}`;
+  }
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch estimate: ${res.statusText}`);
   return res.json();
 }
