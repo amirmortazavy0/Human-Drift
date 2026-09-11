@@ -1,12 +1,145 @@
 {
   "version": "1.0",
   "created_at": "2026-09-11T11:33:45.144562+00:00",
-  "routes": [],
-  "schedules": [],
+  "routes": [
+    {
+      "id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+      "name": "Qazvin -Tehran",
+      "direction_a": "Qazvin",
+      "direction_b": "Tehran",
+      "stations": [
+        {
+          "id": "st-a8293ff3-4398-425c-9914-62fccc2006f9",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Qazvin",
+          "sequence": 0,
+          "notes": null
+        },
+        {
+          "id": "st-729b5c9a-9be4-48dc-86a5-93ec88c674d6",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Abyek",
+          "sequence": 1,
+          "notes": null
+        },
+        {
+          "id": "st-195d7339-ea5c-485e-81fa-27244f117133",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Hashtgerd",
+          "sequence": 2,
+          "notes": null
+        },
+        {
+          "id": "st-eb3f3a3c-b107-4046-9eea-3ceb88f29267",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Karaj",
+          "sequence": 3,
+          "notes": null
+        },
+        {
+          "id": "st-36e5f706-b6d4-4b97-86ed-a233784b7ceb",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Qods Town",
+          "sequence": 4,
+          "notes": null
+        },
+        {
+          "id": "st-73f0c08b-ab95-41d6-b118-bdc00487d2b8",
+          "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+          "name": "Tehran",
+          "sequence": 5,
+          "notes": null
+        }
+      ],
+      "created_at": "2026-09-11T14:23:01.136788+00:00",
+      "is_active": true
+    }
+  ],
+  "schedules": [
+    {
+      "id": "sch-5aba0df8-6752-4aef-b3bd-89fd36f6bd27",
+      "route_id": "rt-694e98ce-a891-473f-ad29-d7e1319eb433",
+      "direction": "A_TO_B",
+      "season_label": "Summer 2026",
+      "is_active": true,
+      "departures": [
+        {
+          "id": "dep-0e24f970-12ac-42f1-90b8-4d8855282803",
+          "schedule_id": "sch-5aba0df8-6752-4aef-b3bd-89fd36f6bd27",
+          "departure_time": "04:50",
+          "arrival_time": "07:10",
+          "label": "Morning Commute"
+        },
+        {
+          "id": "dep-34e82126-3be4-464f-8552-6046f7951e80",
+          "schedule_id": "sch-5aba0df8-6752-4aef-b3bd-89fd36f6bd27",
+          "departure_time": "06:00",
+          "arrival_time": "08:20",
+          "label": "Morning Commute"
+        },
+        {
+          "id": "dep-7bdeaff9-5dc1-4772-befd-dfe8c19493df",
+          "schedule_id": "sch-5aba0df8-6752-4aef-b3bd-89fd36f6bd27",
+          "departure_time": "06:30",
+          "arrival_time": "08:50",
+          "label": "Morning Commute"
+        }
+      ],
+      "created_at": "2026-09-11T14:23:01.136788+00:00"
+    }
+  ],
   "sessions": [],
   "corrections": [],
   "conflicts": [],
-  "audit_log": [],
-  "rest_days": [],
+  "audit_log": [
+    {
+      "id": "aud-b0439fc0-95f9-426b-92f4-e2ddab624ce1",
+      "timestamp": "2026-09-11T14:23:01.136788+00:00",
+      "action": "ROUTE_CREATED",
+      "details": "id:rt-694e98ce-a891-473f-ad29-d7e1319eb433 name:Qazvin -Tehran"
+    },
+    {
+      "id": "aud-115cec1e-31b0-454a-8a0d-c9a1dcc0dee5",
+      "timestamp": "2026-09-11T14:24:17.862193+00:00",
+      "action": "ROUTE_CREATED",
+      "details": "id:rt-75b390cf-283f-44b2-a383-4b51e5540419 name:House - Mahan"
+    },
+    {
+      "id": "aud-29d63f8f-024d-4d13-8c33-abff654c03c7",
+      "timestamp": "2026-09-11T14:24:34.964996+00:00",
+      "action": "ROUTE_UPDATED",
+      "details": "id:rt-75b390cf-283f-44b2-a383-4b51e5540419 name:Origin - Mahan"
+    },
+    {
+      "id": "aud-517437d0-d251-427b-aaac-efc417feed74",
+      "timestamp": "2026-09-11T14:25:07.826835+00:00",
+      "action": "REST_DAY_MARKED",
+      "details": "date:2026-09-11 reason:Weekend"
+    },
+    {
+      "id": "aud-ce85b89e-3f18-4bc4-8c98-4471e2b8e55b",
+      "timestamp": "2026-09-11T14:25:18.931781+00:00",
+      "action": "REST_DAY_MARKED",
+      "details": "date:2026-09-10 reason:Weekend"
+    },
+    {
+      "id": "aud-6919ae72-fc31-4e6c-9ac7-b812c794c710",
+      "timestamp": "2026-09-11T14:25:32.877192+00:00",
+      "action": "ROUTE_DELETED",
+      "details": "id:rt-75b390cf-283f-44b2-a383-4b51e5540419 name:Origin - Mahan"
+    }
+  ],
+  "rest_days": [
+    {
+      "date": "2026-09-11",
+      "reason": "Weekend",
+      "created_at": "2026-09-11T14:25:07.826835+00:00"
+    },
+    {
+      "date": "2026-09-10",
+      "reason": "Weekend",
+      "created_at": "2026-09-11T14:25:18.931781+00:00"
+    }
+  ],
   "target_program_days": 30
 }
