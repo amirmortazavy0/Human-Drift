@@ -1,0 +1,6 @@
+{
+  "name": "Human Drift — Train Performance Study",
+  "description": "Train performance study web application for logging commutes station by station and analyzing drift and delays.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
