@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Route, Schedule } from '../types';
-import { getHealth, resetSessions, markRestDay } from '../api';
+import { getHealth, resetSessions, markRestDay, getAnalyticsProgress, updateTargetDays } from '../api';
 import {
   Settings, Download, RefreshCw, AlertTriangle, Coffee,
-  CheckCircle2, Plus, Server, HardDrive, ShieldAlert, Edit3, Calendar
+  CheckCircle2, Plus, Server, HardDrive, ShieldAlert, Edit3, Calendar, Target
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -12,6 +12,7 @@ interface SettingsViewProps {
   onCreateNewRoute: () => void;
   onEditRoute?: (route: Route) => void;
   onSessionsReset: () => void;
+  onTargetDaysUpdated?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -20,12 +21,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onCreateNewRoute,
   onEditRoute,
   onSessionsReset,
+  onTargetDaysUpdated,
 }) => {
   const [health, setHealth] = useState<{ status: string; sessions: number; routes: number } | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
+
+  // Target Program Days
+  const [targetDays, setTargetDays] = useState<number>(30);
+  const [savingTargetDays, setSavingTargetDays] = useState(false);
+  const [targetDaysSuccess, setTargetDaysSuccess] = useState(false);
 
   // Rest Day quick form
   const [restDayDate, setRestDayDate] = useState(new Date().toISOString().split('T')[0]);
@@ -46,7 +53,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     checkHealth();
+    loadTargetDays();
   }, []);
+
+  const loadTargetDays = async () => {
+    try {
+      const prog = await getAnalyticsProgress();
+      if (prog && prog.target_days) {
+        setTargetDays(prog.target_days);
+      }
+    } catch (err) {
+      console.error('Failed to load target days', err);
+    }
+  };
+
+  const handleSaveTargetDays = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (targetDays < 1) {
+      alert('Target days must be at least 1.');
+      return;
+    }
+    setSavingTargetDays(true);
+    try {
+      await updateTargetDays(targetDays);
+      setTargetDaysSuccess(true);
+      setTimeout(() => setTargetDaysSuccess(false), 3000);
+      if (onTargetDaysUpdated) onTargetDaysUpdated();
+    } catch (err: any) {
+      alert(`Failed to update target days: ${err.message}`);
+    } finally {
+      setSavingTargetDays(false);
+    }
+  };
 
   const checkHealth = async () => {
     setLoadingHealth(true);
@@ -146,6 +184,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Target Program Goal (30-Day Study) */}
+      <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
+            <Target className="w-4 h-4" />
+            <span>Commute Study Target Sessions</span>
+          </div>
+          {targetDaysSuccess && (
+            <span className="text-emerald-400 text-xs flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Target saved
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-stone-400 leading-relaxed">
+          Configure the target number of completed commute sessions required to conclude the study (default is 30 days).
+        </p>
+
+        <form onSubmit={handleSaveTargetDays} className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={targetDays}
+              onChange={(e) => setTargetDays(parseInt(e.target.value, 10) || 1)}
+              className="w-24 bg-stone-950 border border-stone-800 rounded-xl px-3.5 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-500"
+            />
+            <span className="text-xs text-stone-300">sessions</span>
+          </div>
+          <button
+            type="submit"
+            disabled={savingTargetDays}
+            className="py-2.5 px-5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-stone-950 text-xs font-bold rounded-xl transition-colors shadow-md shadow-amber-500/20"
+          >
+            {savingTargetDays ? 'Saving...' : 'Update Target'}
+          </button>
+        </form>
       </div>
 
       {/* Route Management */}

@@ -71,6 +71,31 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
     }
   };
 
+  const handleFixMissingDeparture = async (conflict: ConflictLog) => {
+    if (!conflict.session_id) return;
+    const session = sessionsMap.get(conflict.session_id);
+    if (!session) return;
+    const firstStop = session.stops[0];
+    if (!firstStop) return;
+
+    try {
+      const iso = `${session.date}T${manualTime}:00.000Z`;
+      await createCorrection({
+        stop_id: firstStop.id,
+        field: 'DEPARTED_AT',
+        corrected_value: iso,
+        reason: 'Conflict resolved via retroactive departure',
+      });
+      await updateSession(session.id, { status: 'COMPLETE', confidence: 1 });
+      await resolveConflict(conflict.id, `Departure timestamp set to ${manualTime}`);
+      await fetchConflicts();
+      onConflictResolved();
+      setActiveResolvingId(null);
+    } catch (err: any) {
+      alert(`Failed: ${err.message}`);
+    }
+  };
+
   const handleFixMissingTimestamp = async (conflict: ConflictLog) => {
     if (!conflict.session_id) return;
     const session = sessionsMap.get(conflict.session_id);
@@ -149,7 +174,7 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
           {conflicts.map((conflict) => {
             const session = conflict.session_id ? sessionsMap.get(conflict.session_id) : undefined;
             const route = session ? routesMap.get(session.route_id) : undefined;
-            const isUnresolved = !conflict.is_resolved;
+            const isUnresolved = !conflict.resolved;
 
             return (
               <div
@@ -171,10 +196,10 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                             : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         }`}
                       >
-                        {conflict.type}
+                        {conflict.conflict_type}
                       </span>
                       <span className="text-xs font-mono text-stone-400">
-                        {new Date(conflict.created_at).toLocaleString()}
+                        {new Date(conflict.detected_at).toLocaleString()}
                       </span>
                     </div>
 
@@ -183,7 +208,7 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                     </h3>
                   </div>
 
-                  {conflict.is_resolved && (
+                  {conflict.resolved && (
                     <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1 shrink-0">
                       <CheckCircle className="w-4 h-4" /> Resolved
                     </span>
@@ -209,7 +234,7 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                 )}
 
                 {/* Resolution Summary if already resolved */}
-                {conflict.is_resolved && conflict.resolution && (
+                {conflict.resolved && conflict.resolution && (
                   <div className="text-xs text-stone-400 bg-stone-900 p-3 rounded-lg border border-stone-800">
                     <strong className="text-stone-300">Resolution Applied:</strong> {conflict.resolution}
                   </div>
@@ -223,7 +248,7 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                     </span>
 
                     {/* Option groups based on conflict type */}
-                    {conflict.type === 'DUPLICATE_SESSION' && (
+                    {conflict.conflict_type === 'DUPLICATE_SESSION' && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                           type="button"
@@ -267,7 +292,56 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                       </div>
                     )}
 
-                    {conflict.type === 'MISSING_ARRIVAL' && (
+                    {conflict.conflict_type === 'MISSING_DEPARTURE' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs text-stone-400">Set departure time:</label>
+                          <input
+                            type="time"
+                            value={manualTime}
+                            onChange={(e) => setManualTime(e.target.value)}
+                            className="bg-stone-950 border border-stone-800 rounded px-3 py-1.5 text-xs text-white font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleFixMissingDeparture(conflict)}
+                            className="py-2 px-4 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold rounded-lg"
+                          >
+                            Log Retroactive Departure
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleResolve(
+                                conflict.id,
+                                'User marked session as incomplete',
+                                'INCOMPLETE'
+                              )
+                            }
+                            className="py-2 px-3 bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs rounded-lg"
+                          >
+                            Keep as Incomplete
+                          </button>
+
+                          {conflict.session_id && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDiscardSession(conflict.id, conflict.session_id!)
+                              }
+                              className="py-2 px-3 text-red-400 hover:text-red-300 text-xs flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" /> Discard
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {conflict.conflict_type === 'MISSING_ARRIVAL' && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-3">
                           <label className="text-xs text-stone-400">Set arrival time:</label>
@@ -316,8 +390,9 @@ export const ConflictView: React.FC<ConflictViewProps> = ({
                       </div>
                     )}
 
-                    {conflict.type !== 'DUPLICATE_SESSION' &&
-                      conflict.type !== 'MISSING_ARRIVAL' && (
+                    {conflict.conflict_type !== 'DUPLICATE_SESSION' &&
+                      conflict.conflict_type !== 'MISSING_ARRIVAL' &&
+                      conflict.conflict_type !== 'MISSING_DEPARTURE' && (
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"

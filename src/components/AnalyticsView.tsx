@@ -97,9 +97,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ routes }) => {
         getAnalyticsProgress(),
         getAnalyticsSegments(direction, includeLowConfidence),
         getAnalyticsDepartures(),
-        getAnalyticsDays(),
-        getAnalyticsTrend(),
-        getAnalyticsDwell(),
+        getAnalyticsDays(direction),
+        getAnalyticsTrend(direction),
+        getAnalyticsDwell(direction),
       ]);
 
       setProgress(progData);

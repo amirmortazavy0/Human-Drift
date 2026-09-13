@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Route, Session, Stop, Correction, Schedule, Station } from '../types';
-import { createCorrection, getCorrections, updateSession, deleteSession, stopArrive } from '../api';
+import { Route, Session, Stop, Correction, Schedule, Station, SessionDetails } from '../types';
+import { createCorrection, getCorrections, updateSession, deleteSession, stopArrive, getSessionDetails } from '../api';
 import {
   X, Clock, AlertTriangle, CheckCircle, Edit3, Trash2,
-  Calendar, Star, Plus, ShieldAlert
+  Calendar, Star, Plus, ShieldAlert, ArrowUpDown, Hourglass
 } from 'lucide-react';
 
 interface SessionDetailModalProps {
@@ -24,7 +24,9 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   onSessionDeleted,
 }) => {
   const [corrections, setCorrections] = useState<Correction[]>([]);
+  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
   const [loadingCorrections, setLoadingCorrections] = useState(true);
+  const [switchingDirection, setSwitchingDirection] = useState(false);
   const [activeCorrectionStop, setActiveCorrectionStop] = useState<{
     stop: Stop;
     field: 'ARRIVED_AT' | 'DEPARTED_AT';
@@ -48,17 +50,22 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   const lastStop = sortedStops[sortedStops.length - 1];
 
   useEffect(() => {
-    fetchCorrections();
+    fetchSessionData();
   }, [session.id]);
 
-  const fetchCorrections = async () => {
+  const fetchSessionData = async () => {
     setLoadingCorrections(true);
     try {
-      // get corrections for all stops in this session
-      const allCorrections = await getCorrections();
+      const [allCorrections, details] = await Promise.all([
+        getCorrections(),
+        getSessionDetails(session.id).catch(() => null),
+      ]);
       const stopIds = new Set(session.stops.map((s) => s.id));
       const sessionCorrections = allCorrections.filter((c) => stopIds.has(c.stop_id));
       setCorrections(sessionCorrections);
+      if (details) {
+        setSessionDetails(details);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -81,6 +88,24 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     return { arr, dep };
   };
 
+  const handleSwitchDirection = async () => {
+    const newDir = session.direction === 'A_TO_B' ? 'B_TO_A' : 'A_TO_B';
+    const targetLabel = newDir === 'A_TO_B'
+      ? `${route.direction_a} → ${route.direction_b}`
+      : `${route.direction_b} → ${route.direction_a}`;
+    if (!confirm(`Switch session direction to: ${targetLabel}?\nThis will re-align your stop sequence to the opposite direction.`)) return;
+    try {
+      setSwitchingDirection(true);
+      const res = await updateSession(session.id, { direction: newDir });
+      onSessionUpdated(res.session);
+      await fetchSessionData();
+    } catch (err: any) {
+      alert(`Error updating direction: ${err.message}`);
+    } finally {
+      setSwitchingDirection(false);
+    }
+  };
+
   const handleSaveCorrection = async () => {
     if (!activeCorrectionStop || !newTimeValue) return;
     setSavingCorrection(true);
@@ -94,7 +119,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
         reason: correctionReason.trim() || null,
       });
 
-      await fetchCorrections();
+      await fetchSessionData();
       setActiveCorrectionStop(null);
       setNewTimeValue('');
       setCorrectionReason('');
@@ -145,7 +170,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
         confidence: 1, // Retroactive gets confidence 1
       });
       onSessionUpdated(res.session);
-      await fetchCorrections();
+      await fetchSessionData();
     } catch (err: any) {
       alert(`Failed: ${err.message}`);
     }
@@ -174,9 +199,24 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                 {session.date}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-white">
-              {route.name} ({session.direction === 'A_TO_B' ? `${route.direction_a} → ${route.direction_b}` : `${route.direction_b} → ${route.direction_a}`})
-            </h2>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <h2 className="text-xl font-bold text-white">
+                {route.name}
+              </h2>
+              <span className="text-stone-400 text-sm font-medium">
+                ({session.direction === 'A_TO_B' ? `${route.direction_a} → ${route.direction_b}` : `${route.direction_b} → ${route.direction_a}`})
+              </span>
+              <button
+                type="button"
+                disabled={switchingDirection}
+                onClick={handleSwitchDirection}
+                className="px-2.5 py-1 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-amber-400 border border-stone-700 rounded-lg flex items-center gap-1.5 transition-colors"
+                title="Switch direction and re-sequence recorded stops"
+              >
+                <ArrowUpDown className="w-3 h-3" />
+                <span>Switch to {session.direction === 'A_TO_B' ? 'Inbound' : 'Outbound'}</span>
+              </button>
+            </div>
           </div>
 
           <button
@@ -186,6 +226,38 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Trip Performance Summary (Q6 / Q10) */}
+        {sessionDetails && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-stone-950 border border-stone-800/80 p-3 rounded-xl">
+              <span className="text-[10px] uppercase font-mono text-stone-400 block">Total Duration</span>
+              <div className="text-lg font-bold font-mono text-white mt-0.5">
+                {sessionDetails.total_duration_minutes !== null && sessionDetails.total_duration_minutes !== undefined
+                  ? `${sessionDetails.total_duration_minutes.toFixed(1)}m`
+                  : '—'}
+              </div>
+            </div>
+            <div className="bg-stone-950 border border-stone-800/80 p-3 rounded-xl">
+              <span className="text-[10px] uppercase font-mono text-stone-400 block">Total Dwell</span>
+              <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
+                {sessionDetails.total_dwell_minutes !== null && sessionDetails.total_dwell_minutes !== undefined
+                  ? `${sessionDetails.total_dwell_minutes.toFixed(1)}m`
+                  : '—'}
+              </div>
+            </div>
+            <div className="bg-stone-950 border border-stone-800/80 p-3 rounded-xl">
+              <span className="text-[10px] uppercase font-mono text-stone-400 block">Schedule Delay</span>
+              <div className={`text-lg font-bold font-mono mt-0.5 ${
+                (sessionDetails.scheduled_delay_minutes || 0) > 0 ? 'text-amber-400' : 'text-emerald-400'
+              }`}>
+                {sessionDetails.scheduled_delay_minutes !== null && sessionDetails.scheduled_delay_minutes !== undefined
+                  ? `${sessionDetails.scheduled_delay_minutes > 0 ? '+' : ''}${sessionDetails.scheduled_delay_minutes.toFixed(1)}m`
+                  : 'On Time'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Incomplete session quick recovery banner */}
         {session.status === 'INCOMPLETE' && !lastStop?.arrived_at && (
@@ -288,16 +360,21 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                   <th className="p-3">Arrived</th>
                   <th className="p-3">Departed</th>
                   <th className="p-3">Dwell</th>
+                  <th className="p-3">Segment</th>
+                  <th className="p-3">Delay</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-800/60 font-mono">
                 {sortedStops.map((stop, idx) => {
                   const st = stationsMap.get(stop.station_id);
                   const { arr, dep } = getEffectiveTimestamps(stop);
+                  const detailStop = sessionDetails?.stops.find((ds) => ds.stop_id === stop.id);
 
                   // Calculate dwell
                   let dwellSec: number | null = null;
-                  if (arr && dep) {
+                  if (detailStop?.dwell_time_seconds !== undefined && detailStop?.dwell_time_seconds !== null) {
+                    dwellSec = detailStop.dwell_time_seconds;
+                  } else if (arr && dep) {
                     const diff = (new Date(dep).getTime() - new Date(arr).getTime()) / 1000;
                     if (diff >= 0) dwellSec = Math.round(diff);
                   }
@@ -417,6 +494,29 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                       {/* Dwell Cell */}
                       <td className="p-3 text-stone-400">
                         {dwellSec !== null ? `${dwellSec}s` : '—'}
+                      </td>
+
+                      {/* Segment Duration Cell */}
+                      <td className="p-3 text-stone-300">
+                        {detailStop?.segment_duration_seconds !== null && detailStop?.segment_duration_seconds !== undefined ? (
+                          <span>
+                            {Math.floor(detailStop.segment_duration_seconds / 60)}m {detailStop.segment_duration_seconds % 60}s
+                          </span>
+                        ) : (
+                          <span className="text-stone-600">—</span>
+                        )}
+                      </td>
+
+                      {/* Segment Delay Cell */}
+                      <td className="p-3">
+                        {detailStop?.segment_delay_seconds !== null && detailStop?.segment_delay_seconds !== undefined ? (
+                          <span className={detailStop.segment_delay_seconds > 0 ? 'text-amber-400' : 'text-emerald-400'}>
+                            {detailStop.segment_delay_seconds > 0 ? '+' : ''}
+                            {(detailStop.segment_delay_seconds / 60).toFixed(1)}m
+                          </span>
+                        ) : (
+                          <span className="text-stone-600">—</span>
+                        )}
                       </td>
                     </tr>
                   );

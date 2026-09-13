@@ -171,6 +171,7 @@ export interface TrendAnalysis {
 export interface EstimateRemaining {
   current_station_id: string;
   current_station_name?: string;
+  destination_station_id?: string;
   destination_station_name: string;
   estimated_minutes: number;
   remaining_stations_count: number;
@@ -180,3 +181,35 @@ export interface EstimateRemaining {
     estimated_minutes: number;
   }[];
 }
+
+export interface SessionStopDetail {
+  stop_id: string;
+  station_id: string;
+  station_name: string;
+  sequence: number;
+  is_skipped: boolean;
+  arrived_at?: string | null;
+  departed_at?: string | null;
+  effective_arrived_at?: string | null;
+  effective_departed_at?: string | null;
+  dwell_seconds?: number | null;
+  dwell_formatted?: string | null;
+  segment_duration_seconds?: number | null;
+  segment_duration_formatted?: string | null;
+  segment_delay_seconds?: number | null;
+  notes?: string | null;
+}
+
+export interface SessionDetails {
+  session_id: string;
+  stops: SessionStopDetail[];
+  total_duration_seconds?: number | null;
+  scheduled_departure?: {
+    departure_time?: string | null;
+    arrival_time?: string | null;
+    label?: string | null;
+  } | null;
+  scheduled_delay_seconds?: number | null;
+  cumulative_delay_seconds: number;
+}
+

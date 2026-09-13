@@ -120,6 +120,7 @@ export async function updateSession(id: string, payload: {
   status?: string;
   confidence?: number;
   note?: string | null;
+  direction?: 'A_TO_B' | 'B_TO_A';
 }): Promise<{ session: Session; conflict?: ConflictLog | null }> {
   const res = await fetch(`${API_BASE}/sessions/${id}`, {
     method: 'PUT',
@@ -127,6 +128,12 @@ export async function updateSession(id: string, payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to update session: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getSessionDetails(id: string): Promise<import('./types').SessionDetails> {
+  const res = await fetch(`${API_BASE}/sessions/${id}/details`);
+  if (!res.ok) throw new Error(`Failed to fetch session details: ${res.statusText}`);
   return res.json();
 }
 
@@ -262,21 +269,34 @@ export async function getAnalyticsDepartures(): Promise<DepartureReliability[]> 
   return res.json();
 }
 
-export async function getAnalyticsDays(): Promise<DayReliability[]> {
-  const res = await fetch(`${API_BASE}/analytics/days`);
+export async function getAnalyticsDays(direction?: string): Promise<DayReliability[]> {
+  const query = direction ? `?direction=${encodeURIComponent(direction)}` : '';
+  const res = await fetch(`${API_BASE}/analytics/days${query}`);
   if (!res.ok) throw new Error(`Failed to fetch days reliability: ${res.statusText}`);
   return res.json();
 }
 
-export async function getAnalyticsTrend(): Promise<TrendAnalysis> {
-  const res = await fetch(`${API_BASE}/analytics/trend`);
+export async function getAnalyticsTrend(direction?: string): Promise<TrendAnalysis> {
+  const query = direction ? `?direction=${encodeURIComponent(direction)}` : '';
+  const res = await fetch(`${API_BASE}/analytics/trend${query}`);
   if (!res.ok) throw new Error(`Failed to fetch trend analysis: ${res.statusText}`);
   return res.json();
 }
 
-export async function getAnalyticsDwell(): Promise<DwellAnalysis[]> {
-  const res = await fetch(`${API_BASE}/analytics/dwell`);
+export async function getAnalyticsDwell(direction?: string): Promise<DwellAnalysis[]> {
+  const query = direction ? `?direction=${encodeURIComponent(direction)}` : '';
+  const res = await fetch(`${API_BASE}/analytics/dwell${query}`);
   if (!res.ok) throw new Error(`Failed to fetch dwell times: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateTargetDays(targetProgramDays: number): Promise<{ status: string; target_program_days: number }> {
+  const res = await fetch(`${API_BASE}/settings/target-days`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_program_days: targetProgramDays }),
+  });
+  if (!res.ok) throw new Error(`Failed to update target days: ${res.statusText}`);
   return res.json();
 }
 

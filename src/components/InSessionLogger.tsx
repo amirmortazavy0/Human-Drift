@@ -3,7 +3,7 @@ import { Route, Session, Stop, Station } from '../types';
 import { stopDepart, stopArrive, stopSkip, patchStopNote, updateSession } from '../api';
 import {
   Clock, CheckCircle2, AlertCircle, FileText, FastForward,
-  LogOut, Check
+  LogOut, Check, ArrowUpDown
 } from 'lucide-react';
 
 interface InSessionLoggerProps {
@@ -164,6 +164,24 @@ export const InSessionLogger: React.FC<InSessionLoggerProps> = ({
       onAbandonSession();
     } catch (err: any) {
       alert(`Failed: ${err.message}`);
+    }
+  };
+
+  const handleSwitchDirection = async () => {
+    const newDir = session.direction === 'A_TO_B' ? 'B_TO_A' : 'A_TO_B';
+    const targetLabel = newDir === 'A_TO_B'
+      ? `${route.direction_a} → ${route.direction_b}`
+      : `${route.direction_b} → ${route.direction_a}`;
+    if (!confirm(`Switch session direction to: ${targetLabel}?\nThis will re-align your stop sequence to the opposite direction.`)) return;
+    try {
+      setLoadingAction(true);
+      const res = await updateSession(session.id, { direction: newDir });
+      onSessionUpdated(res.session);
+      setShowExitModal(false);
+    } catch (err: any) {
+      alert(`Failed to switch direction: ${err.message}`);
+    } finally {
+      setLoadingAction(false);
     }
   };
 
@@ -443,6 +461,14 @@ export const InSessionLogger: React.FC<InSessionLoggerProps> = ({
               You can save this session as incomplete and resume later, or wrap it up now.
             </p>
             <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={handleSwitchDirection}
+                className="w-full min-h-[48px] bg-stone-800 hover:bg-stone-700 border border-stone-700 text-amber-400 font-semibold rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                <span>Switch Direction ({session.direction === 'A_TO_B' ? 'To Inbound' : 'To Outbound'})</span>
+              </button>
               <button
                 type="button"
                 onClick={onEndSessionTriggered}

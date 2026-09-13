@@ -47,7 +47,7 @@ class Correction(BaseModel):
     id: str
     stop_id: str
     field: str            # "ARRIVED_AT" or "DEPARTED_AT"
-    original_value: str
+    original_value: Optional[str] = None
     corrected_value: str
     reason: Optional[str] = None
     created_at: str
@@ -140,6 +140,10 @@ class UpdateSessionRequest(BaseModel):
     status: Optional[str] = None
     confidence: Optional[int] = None
     note: Optional[str] = None
+    direction: Optional[str] = None
+
+class UpdateTargetDaysRequest(BaseModel):
+    target_program_days: int
 
 class StopNoteRequest(BaseModel):
     notes: str

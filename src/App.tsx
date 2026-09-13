@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Route, Schedule, Session, ConflictLog, RestDay, ProgramProgress } from './types';
 import {
   getRoutes, getSchedules, getSessions, getConflicts,
-  getRestDays, getAnalyticsProgress, updateSession
+  getRestDays, getAnalyticsProgress, updateSession, markRestDay
 } from './api';
 import { RouteSetup } from './components/RouteSetup';
 import { DirectionSelect } from './components/DirectionSelect';
@@ -13,6 +13,8 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { ConflictView } from './components/ConflictView';
 import { AuditLogView } from './components/AuditLogView';
 import { SettingsView } from './components/SettingsView';
+import { OnboardingView } from './components/OnboardingView';
+import { ProgramCompleteView } from './components/ProgramCompleteView';
 
 import {
   Train, Play, Clock, AlertTriangle, BarChart3,
@@ -41,8 +43,10 @@ export default function App() {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [isEndingSession, setIsEndingSession] = useState(false);
 
-  // Incomplete session alert
-  const [incompleteSession, setIncompleteSession] = useState<Session | null>(null);
+  // Incomplete sessions alert (E1)
+  const [incompleteSessions, setIncompleteSessions] = useState<Session[]>([]);
+  const [dismissedMissedDay, setDismissedMissedDay] = useState(false);
+  const [viewingProgramComplete, setViewingProgramComplete] = useState(false);
 
   // Initial load
   useEffect(() => {
@@ -72,13 +76,9 @@ export default function App() {
         setActiveRouteId((prev) => prev || rts[0].id);
       }
 
-      // Check if there is an in-progress / incomplete session
-      const existingIncomplete = sess.find((s) => s.status === 'INCOMPLETE');
-      if (existingIncomplete) {
-        setIncompleteSession(existingIncomplete);
-      } else {
-        setIncompleteSession(null);
-      }
+      // Check if there are in-progress / incomplete sessions (E1)
+      const existingIncompletes = sess.filter((s) => s.status === 'INCOMPLETE');
+      setIncompleteSessions(existingIncompletes);
     } catch (err) {
       console.error('Failed to load application state:', err);
     } finally {
@@ -88,7 +88,22 @@ export default function App() {
 
   const activeRoute = routes.find((r) => r.id === activeRouteId) || routes[0];
   const lastSession = sessions.length > 0 ? sessions[0] : null; // newest first
-  const unresolvedConflictsCount = conflicts.filter((c) => !c.is_resolved).length;
+  const unresolvedConflictsCount = conflicts.filter((c) => !c.resolved).length;
+
+  // Missed-day check (E7)
+  const getYesterdayMissedDate = (): string | null => {
+    if (dismissedMissedDay || sessions.length === 0) return null;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().split('T')[0];
+    const hasSession = sessions.some((s) => s.date === yStr && s.status === 'COMPLETE');
+    const hasRestDay = restDays.some((r) => r.date === yStr);
+    if (!hasSession && !hasRestDay) {
+      return yStr;
+    }
+    return null;
+  };
+  const missedYesterdayDate = getYesterdayMissedDate();
 
   // Handle Route Creation
   const handleRouteCreated = (newRoute: Route) => {
@@ -109,17 +124,40 @@ export default function App() {
   // Resume Incomplete Session
   const handleResumeIncomplete = (session: Session) => {
     setActiveSession(session);
-    setIncompleteSession(null);
+    setIncompleteSessions((prev) => prev.filter((s) => s.id !== session.id));
   };
 
   // Close Incomplete Session
   const handleCloseIncomplete = async (sessionId: string) => {
     try {
-      await updateSession(sessionId, { status: 'COMPLETE' });
-      setIncompleteSession(null);
+      const res = await updateSession(sessionId, { status: 'COMPLETE' });
+      setIncompleteSessions((prev) => prev.filter((s) => s.id !== sessionId));
       await refreshAllData();
+      if (res.conflict) {
+        alert('Session closed. Note: Missing arrival/departure was detected and added to Conflicts for review.');
+      }
     } catch (err: any) {
       alert(`Error closing session: ${err.message}`);
+    }
+  };
+
+  const handleMarkAbandoned = async (sessionId: string) => {
+    try {
+      await updateSession(sessionId, { status: 'INCOMPLETE', note: 'Abandoned by user' });
+      setIncompleteSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      await refreshAllData();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleLogYesterdayRestDay = async (dateStr: string) => {
+    try {
+      await markRestDay(dateStr, 'Missed commute rest day');
+      setDismissedMissedDay(true);
+      await refreshAllData();
+    } catch (err: any) {
+      alert(`Error recording rest day: ${err.message}`);
     }
   };
 
@@ -141,8 +179,37 @@ export default function App() {
     );
   }
 
+  // Screen 1: Onboarding Flow (shown before any routes are created)
+  if (routes.length === 0 && !isSettingUpRoute) {
+    return (
+      <div className="min-h-screen bg-stone-950 text-stone-100 p-4 sm:p-8 flex items-center justify-center">
+        <OnboardingView onStartSetup={() => setIsSettingUpRoute(true)} />
+      </div>
+    );
+  }
+
+  // Screen 11: Program Complete View
+  if (viewingProgramComplete && progress) {
+    return (
+      <div className="min-h-screen bg-stone-950 text-stone-100 p-4 sm:p-8 flex items-center justify-center">
+        <ProgramCompleteView
+          progress={progress}
+          onDismiss={() => setViewingProgramComplete(false)}
+          onViewAnalytics={() => {
+            setViewingProgramComplete(false);
+            setActiveTab('ANALYTICS');
+          }}
+          onOpenSettings={() => {
+            setViewingProgramComplete(false);
+            setActiveTab('SETTINGS');
+          }}
+        />
+      </div>
+    );
+  }
+
   // 1. Initial Route Setup / Edit Route Flow
-  if (routes.length === 0 || isSettingUpRoute) {
+  if (isSettingUpRoute) {
     return (
       <div className="min-h-screen bg-stone-950 text-stone-100 p-4 sm:p-8">
         <RouteSetup
@@ -285,17 +352,17 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8">
-        {/* Incomplete Session Alert Banner (E1) */}
-        {incompleteSession && (
-          <div className="mb-6 p-4 bg-amber-950/50 border border-amber-500/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-amber-950/30">
+        {/* Missed-Day Notification Banner (E7) */}
+        {missedYesterdayDate && (
+          <div className="mb-6 p-4 bg-stone-900/90 border border-amber-500/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <h2 className="text-sm font-bold text-white">
-                  Incomplete Commute Session Detected
+                  Yesterday ({missedYesterdayDate}) had no commute recorded
                 </h2>
                 <p className="text-xs text-stone-300 mt-0.5">
-                  Logged on {incompleteSession.date} ({incompleteSession.direction === 'A_TO_B' ? 'Outbound' : 'Inbound'}). Would you like to resume logging or close it?
+                  Did you take a day off? Mark it as a rest day to preserve your study streak and prevent missing-data penalties.
                 </p>
               </div>
             </div>
@@ -303,18 +370,81 @@ export default function App() {
             <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
               <button
                 type="button"
-                onClick={() => handleCloseIncomplete(incompleteSession.id)}
-                className="py-2 px-3 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold rounded-lg"
+                onClick={() => setDismissedMissedDay(true)}
+                className="py-2 px-3 bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-stone-200 text-xs font-semibold rounded-lg"
               >
-                Close Session
+                Dismiss
               </button>
               <button
                 type="button"
-                onClick={() => handleResumeIncomplete(incompleteSession)}
+                onClick={() => handleLogYesterdayRestDay(missedYesterdayDate)}
                 className="py-2 px-4 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold rounded-lg"
               >
-                Resume Logger
+                Mark as Rest Day
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Incomplete Sessions Alert Banner (E1) */}
+        {incompleteSessions.length > 0 && (
+          <div className="mb-6 p-4 bg-amber-950/50 border border-amber-500/50 rounded-2xl space-y-3 shadow-lg shadow-amber-950/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                <h2 className="text-sm font-bold text-white">
+                  {incompleteSessions.length === 1
+                    ? 'Incomplete Commute Session Detected'
+                    : `${incompleteSessions.length} Incomplete Commute Sessions Detected`}
+                </h2>
+              </div>
+              <span className="text-[11px] font-mono text-amber-400/90">
+                Action Required
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {incompleteSessions.map((incSess) => (
+                <div
+                  key={incSess.id}
+                  className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div>
+                    <span className="font-semibold text-white">
+                      {incSess.date} — {incSess.direction === 'A_TO_B' ? 'Outbound' : 'Inbound'}
+                    </span>
+                    <span className="text-stone-400 ml-2">
+                      ({incSess.stops.filter((s) => s.departed_at || s.arrived_at).length} of {incSess.stops.length} stops recorded)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAbandoned(incSess.id)}
+                      className="py-1.5 px-2.5 bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-stone-200 text-xs rounded-lg"
+                      title="Keep recorded stops as abandoned"
+                    >
+                      Abandon
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCloseIncomplete(incSess.id)}
+                      className="py-1.5 px-3 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold rounded-lg"
+                      title="Close and validate against timetable"
+                    >
+                      Close Session
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleResumeIncomplete(incSess)}
+                      className="py-1.5 px-3.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold rounded-lg"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -395,16 +525,25 @@ export default function App() {
               </button>
             </div>
 
-            {/* Program Completion Celebration if >= 30 */}
+            {/* Program Completion Celebration if >= target days */}
             {progress && progress.complete_sessions >= progress.target_days && (
-              <div className="p-6 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/40 rounded-2xl flex items-center gap-4 shadow-xl">
-                <Award className="w-12 h-12 text-amber-400 shrink-0" />
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-white">Study Target Reached!</h3>
-                  <p className="text-xs text-stone-300">
-                    You have successfully logged all {progress.target_days} commute sessions. Your line performance baseline is empirically established!
-                  </p>
+              <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-amber-500/20 border border-amber-500/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+                <div className="flex items-start gap-3.5">
+                  <Award className="w-10 h-10 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h3 className="text-base sm:text-lg font-bold text-white">Study Target Reached!</h3>
+                    <p className="text-xs text-stone-300">
+                      You have logged all {progress.target_days} commute sessions. Your line performance baseline is empirically established!
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingProgramComplete(true)}
+                  className="py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs rounded-xl shrink-0 transition-colors shadow-md shadow-amber-500/20"
+                >
+                  View Summary Report
+                </button>
               </div>
             )}
 
@@ -575,6 +714,7 @@ export default function App() {
               setIsSettingUpRoute(true);
             }}
             onSessionsReset={refreshAllData}
+            onTargetDaysUpdated={refreshAllData}
           />
         )}
       </main>

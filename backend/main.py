@@ -12,7 +12,8 @@ from backend.models import (
     Session, Stop, Correction, ConflictLog, RestDay,
     CreateRouteRequest, UpdateRouteRequest,
     CreateSessionRequest, UpdateSessionRequest,
-    StopNoteRequest, CreateCorrectionRequest, ResolveConflictRequest
+    StopNoteRequest, CreateCorrectionRequest, ResolveConflictRequest,
+    UpdateTargetDaysRequest
 )
 from backend.storage import (
     read_app_data, write_app_data, append_audit_log,
@@ -27,6 +28,7 @@ from backend.calculations import (
     calculate_dwell_times,
     calculate_trend_analysis,
     calculate_program_progress,
+    calculate_session_details,
     parse_iso
 )
 
@@ -50,7 +52,7 @@ def run_session_completion_conflict_check(data: AppData, session: Session) -> Op
     if not sorted_stops:
         return None
         
-    # Check 1: Stop arrived_at < departed_at
+    # Check 1: Stop arrived_at > departed_at (within-stop contradiction)
     for stop in sorted_stops:
         if stop.is_skipped:
             continue
@@ -70,7 +72,7 @@ def run_session_completion_conflict_check(data: AppData, session: Session) -> Op
                 append_audit_log(data, "CONFLICT_DETECTED", f"type:ARRIVAL_BEFORE_DEPARTURE session:{session.id}")
                 return conflict
 
-    # Check 2: Sequence arrival before previous departure
+    # Check 2: Sequence arrival before previous departure (inter-stop contradiction)
     for i in range(len(sorted_stops) - 1):
         s_curr = sorted_stops[i]
         s_next = sorted_stops[i+1]
@@ -92,7 +94,37 @@ def run_session_completion_conflict_check(data: AppData, session: Session) -> Op
                 append_audit_log(data, "CONFLICT_DETECTED", f"type:ARRIVAL_BEFORE_DEPARTURE session:{session.id}")
                 return conflict
 
-    # Check 3: Last stop has no arrived_at
+    # Check 3: Origin departure missing (E3)
+    first_stop = sorted_stops[0]
+    if not first_stop.is_skipped and not first_stop.departed_at:
+        conflict = ConflictLog(
+            id=f"cnf-{uuid4()}",
+            session_id=session.id,
+            conflict_type="MISSING_DEPARTURE",
+            description="Initial origin stop is missing a departure timestamp.",
+            resolved=False,
+            detected_at=get_current_iso()
+        )
+        data.conflicts.append(conflict)
+        append_audit_log(data, "CONFLICT_DETECTED", f"type:MISSING_DEPARTURE session:{session.id}")
+        return conflict
+
+    # Check 4: Intermediate stops missing departure timestamp (E3)
+    for stop in sorted_stops[1:-1]:
+        if not stop.is_skipped and stop.arrived_at and not stop.departed_at:
+            conflict = ConflictLog(
+                id=f"cnf-{uuid4()}",
+                session_id=session.id,
+                conflict_type="MISSING_DEPARTURE",
+                description=f"Intermediate stop sequence {stop.sequence} is missing a departure timestamp.",
+                resolved=False,
+                detected_at=get_current_iso()
+            )
+            data.conflicts.append(conflict)
+            append_audit_log(data, "CONFLICT_DETECTED", f"type:MISSING_DEPARTURE session:{session.id}")
+            return conflict
+
+    # Check 5: Destination arrival missing (E2)
     last_stop = sorted_stops[-1]
     if not last_stop.is_skipped and not last_stop.arrived_at:
         conflict = ConflictLog(
@@ -107,7 +139,7 @@ def run_session_completion_conflict_check(data: AppData, session: Session) -> Op
         append_audit_log(data, "CONFLICT_DETECTED", f"type:MISSING_ARRIVAL session:{session.id}")
         return conflict
 
-    # Check 4: Non-first stop has no arrived_at and is not skipped
+    # Check 6: Non-first stop has no arrived_at and is not skipped
     for stop in sorted_stops[1:]:
         if not stop.is_skipped and not stop.arrived_at:
             conflict = ConflictLog(
@@ -386,6 +418,20 @@ def update_session(session_id: str, payload: UpdateSessionRequest):
                 s.confidence = payload.confidence
             if payload.note is not None:
                 s.note = payload.note
+            if payload.direction is not None and payload.direction != s.direction:
+                old_dir = s.direction
+                s.direction = payload.direction
+                # If stops exist on this session, re-sequence or re-align to route order
+                matched_route = next((r for r in data.routes if r.id == s.route_id), None)
+                if matched_route:
+                    ordered = sorted(matched_route.stations, key=lambda st: st.sequence)
+                    if s.direction == "B_TO_A":
+                        ordered = list(reversed(ordered))
+                    # Align stop station IDs to new direction order if untouched or requested
+                    for idx, stp in enumerate(sorted(s.stops, key=lambda x: x.sequence)):
+                        if idx < len(ordered):
+                            stp.station_id = ordered[idx].id
+                append_audit_log(data, "SESSION_DIRECTION_CORRECTED", f"id:{s.id} old:{old_dir} new:{s.direction}")
                 
             conflict_log = None
             if payload.status is not None:
@@ -406,6 +452,11 @@ def update_session(session_id: str, payload: UpdateSessionRequest):
             return {"session": s, "conflict": conflict_log}
             
     raise HTTPException(status_code=404, detail="Session not found")
+
+@app.get("/api/sessions/{session_id}/details")
+def get_session_details(session_id: str):
+    data = read_app_data()
+    return calculate_session_details(data, session_id)
 
 @app.delete("/api/sessions/{session_id}")
 def delete_session(session_id: str):
@@ -506,6 +557,7 @@ def stop_note(stop_id: str, payload: StopNoteRequest):
     data = read_app_data()
     now_iso = get_current_iso()
     found_stop = None
+    target_session = None
     
     for s in data.sessions:
         for stp in s.stops:
@@ -513,13 +565,15 @@ def stop_note(stop_id: str, payload: StopNoteRequest):
                 stp.notes = payload.notes
                 s.updated_at = now_iso
                 found_stop = stp
+                target_session = s
                 break
         if found_stop:
             break
             
-    if not found_stop:
+    if not found_stop or not target_session:
         raise HTTPException(status_code=404, detail="Stop not found")
         
+    append_audit_log(data, "STOP_NOTE_UPDATED", f"stop_id:{stop_id} session:{target_session.id}")
     write_app_data(data)
     return found_stop
 
@@ -530,16 +584,16 @@ def create_correction(payload: CreateCorrectionRequest):
     now_iso = get_current_iso()
     
     # Locate original stop value
-    orig_val = ""
+    orig_val = None
     stop_found = False
     for s in data.sessions:
         for stp in s.stops:
             if stp.id == payload.stop_id:
                 stop_found = True
                 if payload.field == "ARRIVED_AT":
-                    orig_val = stp.arrived_at or ""
+                    orig_val = stp.arrived_at if stp.arrived_at else None
                 elif payload.field == "DEPARTED_AT":
-                    orig_val = stp.departed_at or ""
+                    orig_val = stp.departed_at if stp.departed_at else None
                 break
         if stop_found:
             break
@@ -667,19 +721,30 @@ def analytics_departures():
     return calculate_departures_reliability(data)
 
 @app.get("/api/analytics/days")
-def analytics_days():
+def analytics_days(direction: Optional[str] = None):
     data = read_app_data()
-    return calculate_days_reliability(data)
+    return calculate_days_reliability(data, direction=direction)
 
 @app.get("/api/analytics/trend")
-def analytics_trend():
+def analytics_trend(direction: Optional[str] = None):
     data = read_app_data()
-    return calculate_trend_analysis(data)
+    return calculate_trend_analysis(data, direction=direction)
 
 @app.get("/api/analytics/dwell")
-def analytics_dwell():
+def analytics_dwell(direction: Optional[str] = None):
     data = read_app_data()
-    return calculate_dwell_times(data)
+    return calculate_dwell_times(data, direction=direction)
+
+@app.patch("/api/settings/target-days")
+def update_target_days(payload: UpdateTargetDaysRequest):
+    if payload.target_program_days <= 0:
+        raise HTTPException(status_code=400, detail="Target program days must be greater than 0")
+    data = read_app_data()
+    old_target = data.target_program_days
+    data.target_program_days = payload.target_program_days
+    append_audit_log(data, "TARGET_DAYS_UPDATED", f"from:{old_target} to:{data.target_program_days}")
+    write_app_data(data)
+    return {"status": "ok", "target_program_days": data.target_program_days}
 
 @app.get("/api/analytics/duration")
 def analytics_duration(from_station_id: str, to_station_id: str):

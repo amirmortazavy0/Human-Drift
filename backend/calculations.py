@@ -228,7 +228,7 @@ def calculate_departures_reliability(app_data: AppData) -> List[Dict[str, Any]]:
     return result
 
 # Q4: Reliability by day of week
-def calculate_days_reliability(app_data: AppData) -> List[Dict[str, Any]]:
+def calculate_days_reliability(app_data: AppData, direction: Optional[str] = None) -> List[Dict[str, Any]]:
     # Days 0 = Monday ... 6 = Sunday
     days_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     grouped: Dict[int, List[float]] = {i: [] for i in range(7)}
@@ -240,6 +240,8 @@ def calculate_days_reliability(app_data: AppData) -> List[Dict[str, Any]]:
             
     for session in app_data.sessions:
         if session.status == "CONFLICT":
+            continue
+        if direction and session.direction != direction:
             continue
         try:
             dt = datetime.strptime(session.date, "%Y-%m-%d")
@@ -362,7 +364,7 @@ def calculate_estimate_remaining(
     }
 
 # Q7: Dwell time at stations
-def calculate_dwell_times(app_data: AppData) -> List[Dict[str, Any]]:
+def calculate_dwell_times(app_data: AppData, direction: Optional[str] = None) -> List[Dict[str, Any]]:
     stations_map = {}
     for r in app_data.routes:
         for st in r.stations:
@@ -372,6 +374,8 @@ def calculate_dwell_times(app_data: AppData) -> List[Dict[str, Any]]:
     
     for session in app_data.sessions:
         if session.status == "CONFLICT":
+            continue
+        if direction and session.direction != direction:
             continue
         for stop in session.stops:
             if stop.is_skipped:
@@ -398,7 +402,7 @@ def calculate_dwell_times(app_data: AppData) -> List[Dict[str, Any]]:
     return result
 
 # Q8: Trend over 30 days (Weekly breakdown)
-def calculate_trend_analysis(app_data: AppData) -> Dict[str, Any]:
+def calculate_trend_analysis(app_data: AppData, direction: Optional[str] = None) -> Dict[str, Any]:
     dep_map = {}
     for s in app_data.schedules:
         for d in s.departures:
@@ -407,6 +411,8 @@ def calculate_trend_analysis(app_data: AppData) -> Dict[str, Any]:
     # Group sessions by week
     # Let's sort sessions by date
     valid_sessions = [s for s in app_data.sessions if s.status != "CONFLICT"]
+    if direction:
+        valid_sessions = [s for s in valid_sessions if s.direction == direction]
     valid_sessions.sort(key=lambda s: s.date)
     
     if not valid_sessions:
@@ -476,6 +482,116 @@ def calculate_trend_analysis(app_data: AppData) -> Dict[str, Any]:
         "trend": trend,
         "description": description,
         "weeks": weeks_list
+    }
+
+# Q10 & Q6: Full Session Segment Details with Dwell & Segment Durations + Delay Accumulation
+def calculate_session_details(app_data: AppData, session_id: str) -> Dict[str, Any]:
+    session = next((s for s in app_data.sessions if s.id == session_id), None)
+    if not session:
+        return {"error": "Session not found"}
+        
+    route = next((r for r in app_data.routes if r.id == session.route_id), None)
+    stations_map = {st.id: st for st in (route.stations if route else [])}
+    
+    # Calculate historical segment averages for this direction
+    historical_segments = calculate_segments_analysis(app_data, direction=session.direction, include_low_confidence=True)
+    hist_avg_map = {seg["segment_key"]: seg["avg_duration_minutes"] * 60 for seg in historical_segments}
+    
+    sorted_stops = sorted(session.stops, key=lambda s: s.sequence)
+    stop_details = []
+    cumulative_delay_seconds = 0.0
+    
+    prev_dep: Optional[datetime] = None
+    prev_station_id: Optional[str] = None
+    
+    for i, stop in enumerate(sorted_stops):
+        arr, dep = get_effective_stop_timestamps(stop, app_data.corrections)
+        st_name = stations_map.get(stop.station_id).name if stop.station_id in stations_map else f"Station #{stop.sequence}"
+        
+        dwell_seconds = None
+        dwell_formatted = None
+        if arr and dep and dep >= arr:
+            dwell_seconds = round((dep - arr).total_seconds(), 0)
+            mins = int(dwell_seconds // 60)
+            secs = int(dwell_seconds % 60)
+            dwell_formatted = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+            
+        segment_duration_seconds = None
+        segment_duration_formatted = None
+        segment_delay_seconds = None
+        
+        if prev_dep and arr and arr >= prev_dep and not stop.is_skipped:
+            seg_sec = round((arr - prev_dep).total_seconds(), 0)
+            segment_duration_seconds = seg_sec
+            mins = int(seg_sec // 60)
+            secs = int(seg_sec % 60)
+            segment_duration_formatted = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+            
+            # Delay vs historical segment average (Q6)
+            if prev_station_id:
+                seg_key = f"{prev_station_id}-->{stop.station_id}"
+                hist_avg_sec = hist_avg_map.get(seg_key)
+                if hist_avg_sec:
+                    seg_delay = seg_sec - hist_avg_sec
+                    segment_delay_seconds = round(seg_delay, 0)
+                    cumulative_delay_seconds += seg_delay
+                    
+        stop_details.append({
+            "stop_id": stop.id,
+            "station_id": stop.station_id,
+            "station_name": st_name,
+            "sequence": stop.sequence,
+            "is_skipped": stop.is_skipped,
+            "arrived_at": stop.arrived_at,
+            "departed_at": stop.departed_at,
+            "effective_arrived_at": arr.isoformat() if arr else None,
+            "effective_departed_at": dep.isoformat() if dep else None,
+            "dwell_seconds": dwell_seconds,
+            "dwell_formatted": dwell_formatted,
+            "segment_duration_seconds": segment_duration_seconds,
+            "segment_duration_formatted": segment_duration_formatted,
+            "segment_delay_seconds": segment_delay_seconds,
+            "notes": stop.notes,
+        })
+        
+        if not stop.is_skipped and dep:
+            prev_dep = dep
+            prev_station_id = stop.station_id
+            
+    # Total actual duration
+    total_duration_seconds = None
+    if sorted_stops and not sorted_stops[0].is_skipped and not sorted_stops[-1].is_skipped:
+        first_arr, first_dep = get_effective_stop_timestamps(sorted_stops[0], app_data.corrections)
+        last_arr, last_dep = get_effective_stop_timestamps(sorted_stops[-1], app_data.corrections)
+        start = first_dep or first_arr
+        end = last_arr or last_dep
+        if start and end and end >= start:
+            total_duration_seconds = round((end - start).total_seconds(), 0)
+            
+    # Scheduled delay comparison
+    scheduled_departure = None
+    sched_delay_seconds = None
+    if session.scheduled_departure_id:
+        for sch in app_data.schedules:
+            for dep in sch.departures:
+                if dep.id == session.scheduled_departure_id:
+                    scheduled_departure = dep
+                    break
+        if scheduled_departure and sorted_stops:
+            last_arr, _ = get_effective_stop_timestamps(sorted_stops[-1], app_data.corrections)
+            sched_delay_seconds = get_delay_seconds(last_arr, scheduled_departure.arrival_time, session.date)
+            
+    return {
+        "session_id": session.id,
+        "stops": stop_details,
+        "total_duration_seconds": total_duration_seconds,
+        "scheduled_departure": {
+            "departure_time": scheduled_departure.departure_time if scheduled_departure else None,
+            "arrival_time": scheduled_departure.arrival_time if scheduled_departure else None,
+            "label": scheduled_departure.label if scheduled_departure else None
+        } if scheduled_departure else None,
+        "scheduled_delay_seconds": sched_delay_seconds,
+        "cumulative_delay_seconds": round(cumulative_delay_seconds, 0)
     }
 
 # Q9: Program Progress
