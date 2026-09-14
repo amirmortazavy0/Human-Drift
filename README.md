@@ -1,27 +1,32 @@
-# Human Drift — Train Performance Study
+# Human Drift — R&D Work Logger
 
-A full-stack train commute tracking and performance study web application.
-The laptop is a permanent server. The phone is the client accessing via local WiFi.
-All data is stored in a single JSON file on disk at `backend/data/human_drift.json`.
+An R&D prototype investigating plan-execution drift by preserving intention, logging reality, and maintaining continuity of meaning across flexible work hierarchies.
 
-## Requirements
-- Python 3.12+
-- Node.js 18+
+## Architecture
+- **Server**: Node.js & Express (`server.ts`), serving REST APIs and Vite single-page application on port 3000.
+- **Client**: React 18 with TypeScript and Tailwind CSS.
+- **Persistence**: Single JSON file storage with atomic temp-file writes, automated rolling backups, and append-only event log audit trail at `backend/data/human_drift.json`.
 
-## Run
+## Quick Start
+
+### Windows
+```cmd
+start.bat
+```
+
+### Linux / macOS
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
-## Access
-- Laptop: `http://localhost:8000`
-- Phone (same WiFi): `http://[your-laptop-ip]:8000`
+### Development
+```bash
+npm run dev
+```
 
-## Data
-All data saved to: `backend/data/human_drift.json`
-Back up by copying that file.
-Export from the app: Settings → Export Data
+The application is accessible in your browser at `http://localhost:3000`.
 
-## Stop
-`Ctrl+C` in the terminal
+## Architectural Decisions
+- **Decision 1**: Gap-time between session entries defaults to first-class `Unclassified Context Pause` intervals rather than speculative "overhead" or "slack".
+- **Decision 2**: A Session belongs to exactly one Journey. Crossing journeys creates linked predecessor/successor sessions preserving structural integrity.

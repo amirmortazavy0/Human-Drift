@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "created_at": "2026-09-11T11:33:45.144562+00:00",
+  "journeys": [
+    {
+      "id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
+      "name": "🔬 User Journey 002 — R&D Work Logger",
+      "description": "User Journey 002: Investigating plan-execution drift in deep engineering and research work by preserving intention, logging reality, and capturing unclassified pause intervals.",
+      "owner_id": "00000000-0000-0000-0000-000000000001",
+      "visibility": "PRIVATE",
+      "status": "ACTIVE",
+      "created_at": "2026-09-14T10:21:10.837Z",
+      "completed_at": null
+    },
+    {
+      "id": "jrn-train-commuter-corridor",
+      "name": "🚆 Train Performance Study — Mainline Corridor",
+      "description": "Investigating schedule vs. actual arrival drift, station dwell times, and departure variance across physical transit network.",
+      "owner_id": "00000000-0000-0000-0000-000000000001",
+      "visibility": "PRIVATE",
+      "status": "ACTIVE",
+      "created_at": "2026-09-14T08:00:00.000Z",
+      "completed_at": null
+    }
+  ]
+}

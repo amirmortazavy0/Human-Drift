@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
-from backend.models import AppData, AuditLogEntry
+from backend.models import AppData, EventLogEntry
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STORAGE_FILE = DATA_DIR / "human_drift.json"
@@ -19,14 +19,13 @@ def ensure_storage_file() -> AppData:
         initial_data = AppData(
             version="1.0",
             created_at=get_current_iso(),
-            routes=[],
-            schedules=[],
+            journeys=[],
+            nodes=[],
             sessions=[],
+            entries=[],
             corrections=[],
             conflicts=[],
-            audit_log=[],
-            rest_days=[],
-            target_program_days=30,
+            event_log=[],
         )
         write_app_data(initial_data)
         return initial_data
@@ -36,7 +35,6 @@ def ensure_storage_file() -> AppData:
             data_dict = json.load(f)
             return AppData.model_validate(data_dict)
     except Exception as e:
-        # E12: Database corruption recovery
         timestamp = int(datetime.now().timestamp())
         corrupt_backup = DATA_DIR / f"human_drift.corrupt.{timestamp}.json"
         try:
@@ -51,10 +49,10 @@ def ensure_storage_file() -> AppData:
                 with open(BACKUP_FILE, "r", encoding="utf-8") as bf:
                     bak_dict = json.load(bf)
                     restored_data = AppData.model_validate(bak_dict)
-                    append_audit_log(
+                    append_audit_event(
                         restored_data,
                         "DATABASE_CORRUPTION_RECOVERED",
-                        f"Restored from rolling backup after corruption: {str(e)}"
+                        {"message": f"Restored from rolling backup: {str(e)}"}
                     )
                     write_app_data(restored_data)
                     return restored_data
@@ -65,19 +63,18 @@ def ensure_storage_file() -> AppData:
         fresh_data = AppData(
             version="1.0",
             created_at=get_current_iso(),
-            routes=[],
-            schedules=[],
+            journeys=[],
+            nodes=[],
             sessions=[],
+            entries=[],
             corrections=[],
             conflicts=[],
-            audit_log=[],
-            rest_days=[],
-            target_program_days=30,
+            event_log=[],
         )
-        append_audit_log(
+        append_audit_event(
             fresh_data,
             "DATABASE_CORRUPTION_RECOVERED",
-            f"Initialized fresh store, corrupt copy saved to {corrupt_backup.name}: {str(e)}"
+            {"message": f"Initialized fresh store, corrupt copy saved: {str(e)}"}
         )
         write_app_data(fresh_data)
         return fresh_data
@@ -87,7 +84,7 @@ def read_app_data() -> AppData:
 
 def write_app_data(data: AppData) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temp_file = STORAGE_FILE.with_suffix(".tmp")
+    temp_file = STORAGE_FILE.with_suffix(f".tmp.{uuid4()}")
     data_dict = data.model_dump()
     
     try:
@@ -105,21 +102,21 @@ def write_app_data(data: AppData) -> None:
                 
         os.replace(temp_file, STORAGE_FILE)
     except OSError as err:
-        # E11: App storage full / disk error handling
-        print(f"CRITICAL ERROR writing application storage: {err}")
         if temp_file.exists():
             try:
                 temp_file.unlink()
             except Exception:
                 pass
-        raise RuntimeError(f"Storage write failed (disk full or write restricted): {err}")
+        raise RuntimeError(f"Storage write failed: {err}")
 
-def append_audit_log(data: AppData, action: str, details: str) -> AuditLogEntry:
-    entry = AuditLogEntry(
-        id=f"aud-{uuid4()}",
-        timestamp=get_current_iso(),
-        action=action,
-        details=details
+def append_audit_event(data: AppData, event_type: str, payload: dict) -> EventLogEntry:
+    entry = EventLogEntry(
+        id=f"evt-{uuid4()}",
+        entity_type="System",
+        entity_id="system",
+        event_type=event_type,
+        payload=payload,
+        occurred_at=get_current_iso()
     )
-    data.audit_log.append(entry)
+    data.event_log.append(entry)
     return entry

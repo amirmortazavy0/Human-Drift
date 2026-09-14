@@ -1,64 +1,151 @@
-export interface Station {
-  id: string;
-  route_id: string;
-  name: string;
-  sequence: number;
-  notes?: string | null;
+// Domain Model v1 — Authoritative Type Definitions for Human Drift R&D Work Logger
+
+export type Visibility = 'PRIVATE' | 'SHARED';
+export type JourneyStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETE';
+
+export interface Journey {
+  id: string; // UUID
+  name: string; // "Train Commute", "R&D Work", "Learn Python"
+  description?: string | null;
+  owner_id: string; // UUID
+  visibility: Visibility;
+  status: JourneyStatus;
+  created_at: string; // ISO DateTime
+  completed_at?: string | null;
 }
 
-export interface ScheduledDeparture {
-  id: string;
-  schedule_id: string;
-  departure_time: string; // "HH:MM"
-  arrival_time: string;   // "HH:MM"
+export type NodeType = 'ROUTE' | 'STATION' | 'PROJECT' | 'TASK' | 'MILESTONE' | 'NOTE';
+export type NodeStatus = 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'DORMANT' | 'COMPLETE';
+export type DoneType = 'DELIVERABLE' | 'TIME_TARGET' | 'MILESTONE_SEQUENCE' | 'OPEN_ENDED';
+
+export interface Node {
+  id: string; // UUID
+  journey_id: string; // UUID
+  parent_id?: string | null; // null if top-level node in the journey
+  node_type: NodeType;
+  name: string;
+  description?: string | null;
+  status: NodeStatus;
+  sequence?: number | null; // only meaningful when parent.node_type = ROUTE
+  estimated_minutes?: number | null; // optional; set when user has basis to estimate
+  done_type?: DoneType | null;
+  due_date?: string | null; // YYYY-MM-DD
+  created_at: string; // ISO DateTime
+  completed_at?: string | null;
+  note?: string | null;
+}
+
+export type SessionStatus = 'ACTIVE' | 'COMPLETE' | 'INCOMPLETE' | 'ABANDONED';
+export type SessionQuality = 'POOR' | 'FAIR' | 'GOOD' | 'EXCELLENT';
+
+export interface Session {
+  id: string; // UUID
+  journey_id: string; // UUID
   label?: string | null;
-}
-
-export interface Schedule {
-  id: string;
-  route_id: string;
-  direction: 'A_TO_B' | 'B_TO_A';
-  season_label: string;
-  is_active: boolean;
-  departures: ScheduledDeparture[];
+  intention: string; // declared at session start; NEVER modified
+  started_at: string; // ISO DateTime
+  ended_at?: string | null;
+  status: SessionStatus;
+  end_reason?: 'NATURAL_COMPLETION' | 'JOURNEY_SWITCH' | 'ABANDONED' | 'PAUSED' | string | null;
+  predecessor_session_id?: string | null; // Decision 2: Linked transition from prior session
+  successor_session_id?: string | null; // Decision 2: Linked transition to next session
+  reflection?: string | null; // logged at session end
+  quality?: SessionQuality | null;
+  note?: string | null;
   created_at: string;
+  updated_at: string;
 }
 
-export interface Route {
-  id: string;
-  name: string;
-  direction_a: string;
-  direction_b: string;
-  stations: Station[];
-  created_at: string;
-  is_active: boolean;
+export type EnergyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type FocusLevel = 'SCATTERED' | 'NORMAL' | 'DEEP';
+export type LocationType = 'HOME' | 'CAFE' | 'OFFICE' | 'TRANSIT' | 'OTHER';
+export type EnvironmentType = 'QUIET' | 'AMBIENT' | 'NOISY';
+
+export interface Condition {
+  energy: EnergyLevel;
+  focus: FocusLevel;
+  location: LocationType;
+  environment: EnvironmentType;
+  custom_note?: string | null;
 }
 
-export interface Stop {
-  id: string;
-  session_id: string;
-  station_id: string;
-  sequence: number;
-  arrived_at?: string | null;
-  departed_at?: string | null;
-  is_skipped: boolean;
-  notes?: string | null;
+export type EntryType =
+  | 'TASK_STARTED'
+  | 'TASK_COMPLETED'
+  | 'TASK_PAUSED'
+  | 'CONTEXT_SWITCH'
+  | 'CONTEXT_SWITCH_REQUEST'
+  | 'MILESTONE_REACHED'
+  | 'DISCOVERY'
+  | 'INTENTION_REVISED'
+  | 'STOP_DEPARTED'
+  | 'STOP_ARRIVED'
+  | 'NOTE';
+
+export interface SessionEntry {
+  id: string; // UUID
+  session_id: string; // UUID
+  node_id?: string | null; // null if not tied to a specific node
+  entry_type: EntryType;
+  logged_at: string; // DateTime ISO
+  note?: string | null;
+  condition: Condition; // snapshot at moment of this entry
+  discovery_ref?: string | null; // points to the new Node created if DISCOVERY
+}
+
+// Decision 1: Unclassified context pauses as first-class intervals
+export interface SessionPauseInterval {
+  start: string; // ISO
+  end: string; // ISO
+  duration_minutes: number;
+  classification: 'UNCLASSIFIED_CONTEXT_PAUSE';
+}
+
+export interface SessionSummaryResult {
+  sessionDurationMinutes: number;
+  activeMinutes: number;
+  unclassifiedPauseMinutes: number;
+  pauseIntervals: SessionPauseInterval[];
+  entriesCount: number;
+  discoveriesCount: number;
+  revisionsCount: number;
+  touchedNodeIds: string[];
+}
+
+export interface EventLogEntry {
+  id: string; // UUID
+  entity_type: 'Journey' | 'Node' | 'Session' | 'SessionEntry';
+  entity_id: string;
+  event_type: string;
+  actor_id: string; // UUID
+  payload: any;
+  previous_value?: any | null;
+  occurred_at: string; // ISO DateTime
 }
 
 export interface Correction {
-  id: string;
-  stop_id: string;
-  field: 'ARRIVED_AT' | 'DEPARTED_AT';
+  id: string; // UUID
+  entry_id: string; // UUID
+  field: string;
   original_value: string;
   corrected_value: string;
   reason?: string | null;
   created_at: string;
 }
 
+export type ConflictType =
+  | 'OVERLAPPING_SESSION'
+  | 'INTENTION_NEVER_STARTED'
+  | 'TASK_STARTED_NOT_CLOSED'
+  | 'ENTRY_OUT_OF_ORDER'
+  | 'STOP_SEQUENCE_VIOLATED'
+  | 'DUPLICATE_SESSION'
+  | 'OTHER';
+
 export interface ConflictLog {
-  id: string;
-  session_id: string;
-  conflict_type: 'DUPLICATE_SESSION' | 'ARRIVAL_BEFORE_DEPARTURE' | 'MISSING_DEPARTURE' | 'MISSING_ARRIVAL' | 'OTHER';
+  id: string; // UUID
+  session_id: string; // UUID
+  conflict_type: ConflictType;
   description: string;
   resolved: boolean;
   resolution?: string | null;
@@ -66,150 +153,50 @@ export interface ConflictLog {
   resolved_at?: string | null;
 }
 
-export interface Session {
-  id: string;
-  route_id: string;
-  direction: 'A_TO_B' | 'B_TO_A';
-  date: string; // "YYYY-MM-DD"
-  scheduled_departure_id?: string | null;
-  status: 'COMPLETE' | 'INCOMPLETE' | 'CONFLICT';
-  confidence: number; // 1-5
-  note?: string | null;
-  created_at: string;
-  updated_at: string;
-  stops: Stop[];
+// Priority Query 1: Actual duration vs estimate
+export interface DurationVsEstimateResult {
+  node_id: string;
+  node_name: string;
+  node_type: NodeType;
+  status: NodeStatus;
+  estimated_minutes: number | null;
+  actual_minutes: number;
+  estimation_error_minutes: number | null; // actual - estimated
+  sessions_touched_count: number;
 }
 
-export interface AuditLogEntry {
-  id: string;
-  timestamp: string;
-  action: string;
-  details: string;
+// Priority Query 2: Journey progress
+export interface JourneyProgressResult {
+  journey_id: string;
+  journey_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  active_sessions: number;
+  total_nodes: number;
+  nodes_by_status: Record<NodeStatus, number>;
+  nodes_completed_count: number;
+  nodes_started_count: number;
+  completion_rate: number; // completed / started
+  discoveries_count: number;
+  revisions_count: number;
 }
 
-export interface RestDay {
-  date: string;
-  reason?: string | null;
-  created_at: string;
-}
+// Complete App Data Store
+export type NavTab = 'HIERARCHY' | 'SESSION' | 'HISTORY' | 'QUERIES' | 'AUDIT' | 'GUIDE';
 
 export interface AppData {
   version: string;
   created_at: string;
-  routes: Route[];
-  schedules: Schedule[];
+  journeys: Journey[];
+  nodes: Node[];
   sessions: Session[];
+  entries: SessionEntry[];
   corrections: Correction[];
   conflicts: ConflictLog[];
-  audit_log: AuditLogEntry[];
-  rest_days: RestDay[];
-  target_program_days: number;
+  event_log: EventLogEntry[];
+  // Retained legacy collections for zero-loss compatibility
+  routes?: any[];
+  schedules?: any[];
+  rest_days?: any[];
+  target_program_days?: number;
 }
-
-export interface ProgramProgress {
-  target_days: number;
-  total_sessions: number;
-  complete_sessions: number;
-  incomplete_sessions: number;
-  conflict_sessions: number;
-  days_elapsed: number;
-  days_remaining: number;
-  completion_pct: number;
-  streak: number;
-}
-
-export interface SegmentAnalysis {
-  segment_key: string;
-  from_station_id: string;
-  to_station_id: string;
-  from_station_name: string;
-  to_station_name: string;
-  count: number;
-  avg_duration_minutes: number;
-  min_duration_minutes: number;
-  max_duration_minutes: number;
-  std_dev_minutes: number;
-}
-
-export interface DepartureReliability {
-  departure_id: string;
-  label: string;
-  departure_time: string;
-  arrival_time: string;
-  direction: string;
-  session_count: number;
-  avg_delay_minutes: number;
-  reliability_pct: number;
-}
-
-export interface DayReliability {
-  day_index: number;
-  day_name: string;
-  session_count: number;
-  avg_delay_minutes: number;
-}
-
-export interface DwellAnalysis {
-  station_id: string;
-  station_name: string;
-  count: number;
-  avg_dwell_seconds: number;
-  min_dwell_seconds: number;
-  max_dwell_seconds: number;
-}
-
-export interface TrendAnalysis {
-  trend: 'IMPROVING' | 'STABLE' | 'DEGRADING' | 'NO_DATA';
-  description: string;
-  weeks: {
-    week: number;
-    session_count: number;
-    avg_delay_minutes: number;
-  }[];
-}
-
-export interface EstimateRemaining {
-  current_station_id: string;
-  current_station_name?: string;
-  destination_station_id?: string;
-  destination_station_name: string;
-  estimated_minutes: number;
-  remaining_stations_count: number;
-  segments_breakdown: {
-    from_name: string;
-    to_name: string;
-    estimated_minutes: number;
-  }[];
-}
-
-export interface SessionStopDetail {
-  stop_id: string;
-  station_id: string;
-  station_name: string;
-  sequence: number;
-  is_skipped: boolean;
-  arrived_at?: string | null;
-  departed_at?: string | null;
-  effective_arrived_at?: string | null;
-  effective_departed_at?: string | null;
-  dwell_seconds?: number | null;
-  dwell_formatted?: string | null;
-  segment_duration_seconds?: number | null;
-  segment_duration_formatted?: string | null;
-  segment_delay_seconds?: number | null;
-  notes?: string | null;
-}
-
-export interface SessionDetails {
-  session_id: string;
-  stops: SessionStopDetail[];
-  total_duration_seconds?: number | null;
-  scheduled_departure?: {
-    departure_time?: string | null;
-    arrival_time?: string | null;
-    label?: string | null;
-  } | null;
-  scheduled_delay_seconds?: number | null;
-  cumulative_delay_seconds: number;
-}
-

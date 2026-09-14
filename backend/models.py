@@ -1,53 +1,73 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 
-class Station(BaseModel):
-    id: str
-    route_id: str
-    name: str
-    sequence: int
-    notes: Optional[str] = None
+# Domain Model v1 — Authoritative Type Definitions for Human Drift R&D Work Logger
 
-class ScheduledDeparture(BaseModel):
-    id: str
-    schedule_id: str
-    departure_time: str   # "HH:MM"
-    arrival_time: str     # "HH:MM"
-    label: Optional[str] = None
-
-class Schedule(BaseModel):
-    id: str
-    route_id: str
-    direction: str        # "A_TO_B" or "B_TO_A"
-    season_label: str
-    is_active: bool = True
-    departures: List[ScheduledDeparture] = []
-    created_at: str
-
-class Route(BaseModel):
+class Journey(BaseModel):
     id: str
     name: str
-    direction_a: str
-    direction_b: str
-    stations: List[Station] = []
+    description: Optional[str] = None
+    owner_id: str = "00000000-0000-0000-0000-000000000001"
+    visibility: str = "PRIVATE"
+    status: str = "ACTIVE"
     created_at: str
-    is_active: bool = True
+    completed_at: Optional[str] = None
 
-class Stop(BaseModel):
+class Node(BaseModel):
+    id: str
+    journey_id: str
+    parent_id: Optional[str] = None
+    node_type: str = "TASK"
+    name: str
+    description: Optional[str] = None
+    status: str = "PLANNED"
+    sequence: Optional[int] = None
+    estimated_minutes: Optional[float] = None
+    done_type: Optional[str] = None
+    due_date: Optional[str] = None
+    created_at: str
+    completed_at: Optional[str] = None
+    note: Optional[str] = None
+
+class Condition(BaseModel):
+    energy: str = "HIGH"
+    focus: str = "DEEP"
+    location: str = "HOME"
+    environment: str = "QUIET"
+    custom_note: Optional[str] = None
+
+class SessionEntry(BaseModel):
     id: str
     session_id: str
-    station_id: str
-    sequence: int
-    arrived_at: Optional[str] = None    # ISO 8601 or null
-    departed_at: Optional[str] = None   # ISO 8601 or null
-    is_skipped: bool = False
-    notes: Optional[str] = None
+    node_id: Optional[str] = None
+    entry_type: str
+    logged_at: str
+    note: Optional[str] = None
+    condition: Condition = Field(default_factory=Condition)
+    discovery_ref: Optional[str] = None
+
+class Session(BaseModel):
+    id: str
+    journey_id: str
+    label: Optional[str] = None
+    intention: str
+    started_at: str
+    ended_at: Optional[str] = None
+    status: str = "ACTIVE"
+    end_reason: Optional[str] = None
+    predecessor_session_id: Optional[str] = None
+    successor_session_id: Optional[str] = None
+    reflection: Optional[str] = None
+    quality: Optional[str] = None
+    note: Optional[str] = None
+    created_at: str
+    updated_at: str
 
 class Correction(BaseModel):
     id: str
-    stop_id: str
-    field: str            # "ARRIVED_AT" or "DEPARTED_AT"
-    original_value: Optional[str] = None
+    entry_id: str
+    field: str
+    original_value: str
     corrected_value: str
     reason: Optional[str] = None
     created_at: str
@@ -55,104 +75,35 @@ class Correction(BaseModel):
 class ConflictLog(BaseModel):
     id: str
     session_id: str
-    conflict_type: str    # "DUPLICATE_SESSION" | "ARRIVAL_BEFORE_DEPARTURE" |
-                          # "MISSING_DEPARTURE" | "MISSING_ARRIVAL" | "OTHER"
+    conflict_type: str
     description: str
     resolved: bool = False
     resolution: Optional[str] = None
     detected_at: str
     resolved_at: Optional[str] = None
 
-class Session(BaseModel):
+class EventLogEntry(BaseModel):
     id: str
-    route_id: str
-    direction: str        # "A_TO_B" or "B_TO_A"
-    date: str             # "YYYY-MM-DD"
-    scheduled_departure_id: Optional[str] = None
-    status: str           # "COMPLETE" | "INCOMPLETE" | "CONFLICT"
-    confidence: int = 3   # 1–5
-    note: Optional[str] = None
-    created_at: str
-    updated_at: str
-    stops: List[Stop] = []
-
-class AuditLogEntry(BaseModel):
-    id: str
-    timestamp: str
-    action: str
-    details: str
-
-class RestDay(BaseModel):
-    date: str
-    reason: Optional[str] = None
-    created_at: str
+    entity_type: str
+    entity_id: str
+    event_type: str
+    actor_id: str = "00000000-0000-0000-0000-000000000001"
+    payload: Any = None
+    previous_value: Optional[Any] = None
+    occurred_at: str
 
 class AppData(BaseModel):
     version: str = "1.0"
     created_at: str
-    routes: List[Route] = []
-    schedules: List[Schedule] = []
+    journeys: List[Journey] = []
+    nodes: List[Node] = []
     sessions: List[Session] = []
+    entries: List[SessionEntry] = []
     corrections: List[Correction] = []
     conflicts: List[ConflictLog] = []
-    audit_log: List[AuditLogEntry] = []
-    rest_days: List[RestDay] = []
-    target_program_days: int = 30
-
-
-# Request and Response schemas
-class StationInput(BaseModel):
-    name: str
-    sequence: int
-    notes: Optional[str] = None
-
-class ScheduledDepartureInput(BaseModel):
-    departure_time: str
-    arrival_time: str
-    label: Optional[str] = None
-
-class ScheduleInput(BaseModel):
-    direction: str
-    season_label: str
-    departures: List[ScheduledDepartureInput] = []
-
-class CreateRouteRequest(BaseModel):
-    name: str
-    direction_a: str
-    direction_b: str
-    stations: List[StationInput] = []
-    schedules: List[ScheduleInput] = []
-
-class UpdateRouteRequest(BaseModel):
-    name: Optional[str] = None
-    direction_a: Optional[str] = None
-    direction_b: Optional[str] = None
-    stations: Optional[List[StationInput]] = None
-    schedules: Optional[List[ScheduleInput]] = None
-    is_active: Optional[bool] = None
-
-class CreateSessionRequest(BaseModel):
-    route_id: str
-    direction: str
-    scheduled_departure_id: Optional[str] = None
-
-class UpdateSessionRequest(BaseModel):
-    status: Optional[str] = None
-    confidence: Optional[int] = None
-    note: Optional[str] = None
-    direction: Optional[str] = None
-
-class UpdateTargetDaysRequest(BaseModel):
-    target_program_days: int
-
-class StopNoteRequest(BaseModel):
-    notes: str
-
-class CreateCorrectionRequest(BaseModel):
-    stop_id: str
-    field: str
-    corrected_value: str
-    reason: Optional[str] = None
-
-class ResolveConflictRequest(BaseModel):
-    resolution: str
+    event_log: List[EventLogEntry] = []
+    # Legacy compatibility fields
+    routes: Optional[List[Any]] = []
+    schedules: Optional[List[Any]] = []
+    rest_days: Optional[List[Any]] = []
+    target_program_days: Optional[int] = 30

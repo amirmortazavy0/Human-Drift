@@ -3,14 +3,13 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import {
   AppData,
-  AuditLogEntry,
   ConflictLog,
   Correction,
-  RestDay,
-  Route,
-  Schedule,
+  EventLogEntry,
+  Journey,
+  Node,
   Session,
-  Stop,
+  SessionEntry,
 } from '../src/types';
 
 const DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
@@ -21,6 +20,8 @@ export function getCurrentIso(): string {
   return new Date().toISOString();
 }
 
+export const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 export function ensureStorageFile(): AppData {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -30,14 +31,13 @@ export function ensureStorageFile(): AppData {
     const initialData: AppData = {
       version: '1.0',
       created_at: getCurrentIso(),
-      routes: [],
-      schedules: [],
+      journeys: [],
+      nodes: [],
       sessions: [],
+      entries: [],
       corrections: [],
       conflicts: [],
-      audit_log: [],
-      rest_days: [],
-      target_program_days: 30,
+      event_log: [],
     };
     writeAppData(initialData);
     return initialData;
@@ -46,64 +46,56 @@ export function ensureStorageFile(): AppData {
   try {
     const raw = fs.readFileSync(STORAGE_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
-    return {
+
+    const data: AppData = {
       version: parsed.version || '1.0',
       created_at: parsed.created_at || getCurrentIso(),
+      journeys: Array.isArray(parsed.journeys) ? parsed.journeys : [],
+      nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
+      sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+      entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+      corrections: Array.isArray(parsed.corrections) ? parsed.corrections : [],
+      conflicts: Array.isArray(parsed.conflicts) ? parsed.conflicts : [],
+      event_log: Array.isArray(parsed.event_log) ? parsed.event_log : [],
       routes: parsed.routes || [],
       schedules: parsed.schedules || [],
-      sessions: parsed.sessions || [],
-      corrections: parsed.corrections || [],
-      conflicts: parsed.conflicts || [],
-      audit_log: parsed.audit_log || [],
       rest_days: parsed.rest_days || [],
       target_program_days: parsed.target_program_days ?? 30,
     };
+    return data;
   } catch (err: any) {
-    // Corruption recovery
-    console.error('Database corruption detected:', err);
-    const timestamp = Math.floor(Date.now() / 1000);
-    const corruptBackup = path.join(DATA_DIR, `human_drift.corrupt.${timestamp}.json`);
-    try {
-      if (fs.existsSync(STORAGE_FILE)) {
-        fs.copyFileSync(STORAGE_FILE, corruptBackup);
-      }
-    } catch {
-      // ignore
-    }
-
+    console.error('Database read error, attempting backup restoration:', err);
     if (fs.existsSync(BACKUP_FILE)) {
       try {
         const bakRaw = fs.readFileSync(BACKUP_FILE, 'utf-8');
         const restored = JSON.parse(bakRaw);
-        appendAuditLog(
-          restored,
-          'DATABASE_CORRUPTION_RECOVERED',
-          `Restored from rolling backup after corruption: ${err.message}`
-        );
-        writeAppData(restored);
-        return restored;
+        return {
+          version: restored.version || '1.0',
+          created_at: restored.created_at || getCurrentIso(),
+          journeys: restored.journeys || [],
+          nodes: restored.nodes || [],
+          sessions: restored.sessions || [],
+          entries: restored.entries || [],
+          corrections: restored.corrections || [],
+          conflicts: restored.conflicts || [],
+          event_log: restored.event_log || [],
+        };
       } catch {
-        // backup also corrupted
+        // backup also damaged
       }
     }
 
     const fresh: AppData = {
       version: '1.0',
       created_at: getCurrentIso(),
-      routes: [],
-      schedules: [],
+      journeys: [],
+      nodes: [],
       sessions: [],
+      entries: [],
       corrections: [],
       conflicts: [],
-      audit_log: [],
-      rest_days: [],
-      target_program_days: 30,
+      event_log: [],
     };
-    appendAuditLog(
-      fresh,
-      'DATABASE_CORRUPTION_RECOVERED',
-      `Initialized fresh store, corrupt copy saved: ${err.message}`
-    );
     writeAppData(fresh);
     return fresh;
   }
@@ -127,13 +119,13 @@ export function writeAppData(data: AppData): void {
       try {
         fs.copyFileSync(STORAGE_FILE, BACKUP_FILE);
       } catch {
-        // ignore backup error
+        // ignore backup copy error
       }
     }
 
     fs.renameSync(tempFile, STORAGE_FILE);
   } catch (err: any) {
-    console.error(`CRITICAL ERROR writing application storage: ${err.message}`);
+    console.error(`Error saving Human Drift data: ${err.message}`);
     if (fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
@@ -141,22 +133,38 @@ export function writeAppData(data: AppData): void {
         // ignore
       }
     }
-    throw new Error(`Storage write failed: ${err.message}`);
+    throw err;
   }
 }
 
-export function appendAuditLog(data: AppData, action: string, details: string): AuditLogEntry {
-  const entry: AuditLogEntry = {
-    id: `aud-${randomUUID()}`,
-    timestamp: getCurrentIso(),
-    action,
-    details,
-  };
-  if (!data.audit_log) {
-    data.audit_log = [];
+// Append-only Event Log helper adhering to Event Schema v1 and AD-002
+export function appendEvent(
+  data: AppData,
+  params: {
+    entity_type: 'Journey' | 'Node' | 'Session' | 'SessionEntry';
+    entity_id: string;
+    event_type: string;
+    actor_id?: string;
+    payload: any;
+    previous_value?: any | null;
   }
-  data.audit_log.push(entry);
-  return entry;
+): EventLogEntry {
+  const event: EventLogEntry = {
+    id: `evt-${randomUUID()}`,
+    entity_type: params.entity_type,
+    entity_id: params.entity_id,
+    event_type: params.event_type,
+    actor_id: params.actor_id || DEFAULT_USER_ID,
+    payload: params.payload,
+    previous_value: params.previous_value ?? null,
+    occurred_at: getCurrentIso(),
+  };
+
+  if (!data.event_log) {
+    data.event_log = [];
+  }
+  data.event_log.push(event);
+  return event;
 }
 
 export { STORAGE_FILE };
