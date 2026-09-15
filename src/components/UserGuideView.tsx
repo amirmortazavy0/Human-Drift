@@ -1,604 +1,364 @@
 import React, { useState } from 'react';
 import {
-  BookOpen,
-  Compass,
-  FolderTree,
-  Play,
-  History,
-  BarChart2,
-  ShieldCheck,
-  CheckCircle2,
-  ArrowRight,
-  Sparkles,
-  Smartphone,
-  Layers,
-  HelpCircle,
-  Lightbulb,
-  Clock,
-  Shuffle,
-  Eye,
-  AlertTriangle,
-  Train,
-  FlaskConical,
+  Compass, FolderTree, Play, History, BarChart2, ShieldCheck,
+  ArrowRight, Lightbulb, Shuffle, CheckCircle, Lock, Eye,
+  PlusCircle, Zap, ChevronRight, ChevronDown,
 } from 'lucide-react';
 import { NavTab } from '../types';
+import { Lang } from '../i18n';
 
 interface UserGuideViewProps {
+  lang: Lang;
   onNavigateTab: (tab: NavTab) => void;
-  onSelectJourney?: (journeyId: string) => void;
   onOpenStartSession?: () => void;
 }
 
-export const UserGuideView: React.FC<UserGuideViewProps> = ({
-  onNavigateTab,
-  onSelectJourney,
-  onOpenStartSession,
-}) => {
-  const [selectedSection, setSelectedSection] = useState<
-    'OVERVIEW' | 'TABS' | 'JOURNEYS' | 'PRINCIPLES' | 'MOBILE_UX' | 'TEST_CHECKLIST'
-  >('OVERVIEW');
+// All guide content in both languages
+const content = {
+  en: {
+    steps: [
+      { id: 'WHERE_AM_I',     label: 'Where am I?' },
+      { id: 'FIRST_JOURNEY',  label: 'Set up your work' },
+      { id: 'FIRST_SESSION',  label: 'Start a session' },
+      { id: 'DURING_SESSION', label: 'While working' },
+      { id: 'AFTER_SESSION',  label: 'After a session' },
+      { id: 'CONCEPTS',       label: 'Key concepts' },
+    ],
+    prev: '← Previous',
+    next: 'Next →',
+    done: 'Start working →',
+
+    whereAmI: {
+      title: "You're in Human Drift.",
+      body: "This app tracks the gap between what you intended to do and what actually happened. It doesn't manage your tasks — it observes your work and preserves the record honestly.",
+      quote: "You declare what you intend to do. You log what actually happens. The system preserves both — and the gap between them — without ever rewriting history.",
+      navTitle: 'Five views in the app',
+    },
+    firstJourney: {
+      title: 'Set up your work',
+      body: 'Before you can log a session, you need a Journey and at least one Node inside it.',
+      steps: [
+        { title: 'Create a Journey', body: 'A Journey is the long-lived context — "R&D Work", "Learn Python", "IG Research". Use the Plan tab and the + button in the header to create one.' },
+        { title: 'Add Nodes', body: 'Inside a Journey, create Nodes — projects, tasks, or milestones. Tap + Add item in the Plan view. You can nest them as deep as you need.' },
+        { title: 'Set an estimate (optional but valuable)', body: 'If you have a sense of how long a task should take, set an estimate. This is what Queries will compare against your actual time later.' },
+      ],
+      cta: 'Go to Plan',
+    },
+    firstSession: {
+      title: 'Starting a session',
+      body: 'A session is a working period. You declare what you intend to do, then reality is logged against that declaration.',
+      steps: [
+        { title: 'Write your intention', body: 'Be specific. "Work on IG research" is weaker than "Find three competitor accounts and note their posting patterns." Your intention is locked the moment you start.' },
+        { title: 'Set your starting condition', body: 'Energy, focus, location, environment — these stay at whatever you set until you change them. Be honest. Low energy is valid data.' },
+        { title: 'Lock and begin', body: 'Tapping "Lock Intention & Start" commits the record. The session clock starts.' },
+      ],
+      tip: 'Tip: You can start a session from the Plan view by tapping the play icon next to any item.',
+      cta: 'Start a session now',
+    },
+    duringSession: {
+      title: "While you're working",
+      body: 'The Active Session screen is built for one-tap logging. Just tap what\'s happening.',
+      actions: [
+        { label: 'Start Task',       body: 'When you begin working on a specific node.' },
+        { label: 'Complete Task',    body: 'When you finish. The node status updates automatically.' },
+        { label: 'Switch Context',   body: 'When you stop one thing and start another without completing it.' },
+        { label: 'Log Discovery',    body: "When something new surfaces that you didn't plan. Creates a new node and preserves where the idea came from." },
+        { label: 'Revise Intention', body: 'When your focus genuinely shifts. The original intention stays locked — this adds a revision record.' },
+        { label: 'Change Condition', body: 'Tap any condition chip when it changes. It only updates if you tap it.' },
+      ],
+      gap: 'On gaps: Time between taps is recorded as an unclassified pause — not "wasted time". Just a gap. The system doesn\'t judge it.',
+      cta: 'Go to Active Session',
+    },
+    afterSession: {
+      title: 'After a session',
+      body: 'When you end a session, you add a reflection, and the data becomes available in History and Queries.',
+      steps: [
+        { title: 'Reflection + quality rating', body: 'Write a brief note on how the session went. Rate the session quality. These become part of the permanent record.' },
+        { title: 'Check the History tab', body: 'Every session is stored chronologically. Drill into any session to see the full entry timeline — every tap, every condition, every gap.' },
+        { title: 'Check the Queries tab', body: 'After a few sessions, Query 1 will show how your actual time compares to what you estimated. This is the core drift signal.' },
+        { title: 'Corrections', body: 'If you spot a mistake in the history, you can correct it. The original is never deleted. Both versions are preserved.' },
+      ],
+    },
+    concepts: {
+      title: 'Key concepts',
+      subtitle: 'Tap any term to expand it.',
+      items: [
+        { term: 'Journey', body: 'A long-lived context that contains all your work in one domain. Sessions belong to exactly one Journey.' },
+        { term: 'Node', body: 'Any unit of work — a project, a task, a milestone, or a note. Nodes live inside Journeys and can be nested freely.' },
+        { term: 'Session', body: 'One working period with a declared intention. The intention is locked at the start.' },
+        { term: 'Intention (immutable)', body: 'The commitment you make at the start of a session. It is written once and never changed. If your focus shifts, you log a Revision — the original stays in the record.' },
+        { term: 'Condition', body: 'The circumstances at the moment of a tap: energy, focus, location, environment. Sticky — they carry forward until you change them.' },
+        { term: 'Discovery', body: "When something new surfaces mid-session that you didn't plan for. It creates a new Node and records the lineage." },
+        { term: 'Drift', body: 'The gap between what was intended and what actually happened. Drift is information, not failure.' },
+        { term: 'Unclassified Context Pause', body: 'Time between taps not attributed to any task. Recorded as a gap interval. The system records it; classification comes later.' },
+        { term: 'Append-only audit log', body: 'Every data mutation produces an event record that is never modified or deleted. Corrections add — never overwrite.' },
+      ],
+    },
+  },
+  fa: {
+    steps: [
+      { id: 'WHERE_AM_I',     label: 'کجا هستم؟' },
+      { id: 'FIRST_JOURNEY',  label: 'راه‌اندازی کار' },
+      { id: 'FIRST_SESSION',  label: 'شروع جلسه' },
+      { id: 'DURING_SESSION', label: 'هنگام کار' },
+      { id: 'AFTER_SESSION',  label: 'بعد از جلسه' },
+      { id: 'CONCEPTS',       label: 'مفاهیم کلیدی' },
+    ],
+    prev: '← قبلی',
+    next: 'بعدی →',
+    done: 'شروع کار →',
+
+    whereAmI: {
+      title: 'در Human Drift هستید.',
+      body: 'این اپ شکاف بین آنچه قصد داشتید و آنچه واقعاً اتفاق افتاد را ردیابی می‌کند. کارهایتان را مدیریت نمی‌کند — فقط آن‌ها را صادقانه ثبت می‌کند.',
+      quote: 'اعلام می‌کنید چه قصدی دارید. ثبت می‌کنید چه اتفاقی افتاد. سیستم هر دو را — و فاصله بینشان را — بدون هیچ بازنویسی حفظ می‌کند.',
+      navTitle: 'پنج بخش اپ',
+    },
+    firstJourney: {
+      title: 'راه‌اندازی کار',
+      body: 'پیش از ثبت جلسه، به یک سفر و حداقل یک مورد داخل آن نیاز دارید.',
+      steps: [
+        { title: 'ایجاد سفر', body: 'سفر یک زمینه بلندمدت است — "کار تحقیقاتی"، "یادگیری Python". از بخش برنامه و دکمه + در هدر یک سفر بسازید.' },
+        { title: 'افزودن موارد', body: 'داخل سفر، مواردی بسازید — پروژه‌ها، وظایف یا نقاط عطف. روی + افزودن در بخش برنامه بزنید. می‌توانید تو در تو کنید.' },
+        { title: 'تخمین زمان (اختیاری ولی ارزشمند)', body: 'اگر ایده‌ای درباره مدت زمان کار دارید، تخمین بزنید. این همان چیزی است که بعداً با زمان واقعی مقایسه خواهد شد.' },
+      ],
+      cta: 'رفتن به برنامه',
+    },
+    firstSession: {
+      title: 'شروع جلسه',
+      body: 'جلسه یک دوره کاری است. نیتتان را اعلام می‌کنید، سپس واقعیت در مقابل آن ثبت می‌شود.',
+      steps: [
+        { title: 'نیتتان را بنویسید', body: 'مشخص باشید. "روی تحقیق اینستاگرام کار می‌کنم" ضعیف‌تر از "سه حساب رقیب پیدا می‌کنم و الگوی پستشان را یادداشت می‌کنم" است. نیت از لحظه شروع قفل می‌شود.' },
+        { title: 'شرایط اولیه را تنظیم کنید', body: 'انرژی، تمرکز، مکان، محیط — تا زمانی که تغییرشان ندهید همانطور می‌مانند. صادق باشید. انرژی پایین هم داده معتبر است.' },
+        { title: 'قفل و شروع', body: 'با زدن "قفل کردن نیت و شروع"، ثبت انجام می‌شود و ساعت جلسه شروع می‌شود.' },
+      ],
+      tip: 'نکته: می‌توانید از بخش برنامه با زدن آیکون پخش کنار هر مورد، جلسه شروع کنید.',
+      cta: 'شروع جلسه',
+    },
+    duringSession: {
+      title: 'هنگام کار',
+      body: 'صفحه جلسه فعال برای ثبت با یک ضربه طراحی شده. فقط چیزی که اتفاق می‌افتد را بزنید.',
+      actions: [
+        { label: 'شروع وظیفه',       body: 'وقتی روی یک مورد شروع به کار می‌کنید.' },
+        { label: 'تکمیل وظیفه',      body: 'وقتی تمام می‌کنید. وضعیت مورد خودکار به‌روز می‌شود.' },
+        { label: 'تغییر زمینه',       body: 'وقتی یک کار را بدون تکمیل رها می‌کنید و چیز دیگری شروع می‌کنید.' },
+        { label: 'ثبت کشف',          body: 'وقتی چیز جدید برنامه‌ریزی نشده‌ای پیدا می‌کنید. یک مورد جدید می‌سازد و منشأش را حفظ می‌کند.' },
+        { label: 'تجدید نظر در نیت', body: 'وقتی تمرکزتان واقعاً تغییر می‌کند. نیت اصلی قفل می‌ماند — این فقط یک ثبت تجدیدنظر اضافه می‌کند.' },
+        { label: 'تغییر شرایط',      body: 'روی هر چیپ شرایط بزنید وقتی تغییر می‌کند. فقط وقتی بزنید تغییر می‌کند.' },
+      ],
+      gap: 'درباره فاصله‌ها: زمان بین ضربه‌ها به عنوان توقف طبقه‌بندی نشده ثبت می‌شود — نه "وقت هدر رفته". فقط یک فاصله. سیستم قضاوت نمی‌کند.',
+      cta: 'رفتن به جلسه فعال',
+    },
+    afterSession: {
+      title: 'بعد از جلسه',
+      body: 'وقتی جلسه را پایان می‌دهید، تأمل می‌نویسید و داده در تاریخچه و پرس‌وجو در دسترس می‌شود.',
+      steps: [
+        { title: 'تأمل + امتیاز کیفی', body: 'یک یادداشت کوتاه درباره چگونگی جلسه بنویسید. این بخشی از سند دائمی می‌شود.' },
+        { title: 'بررسی تاریخچه', body: 'هر جلسه به ترتیب زمانی ذخیره می‌شود. می‌توانید هر جلسه را باز کنید و کل جدول زمانی را ببینید.' },
+        { title: 'بررسی پرس‌وجو', body: 'بعد از چند جلسه، پرس‌وجوی ۱ نشان می‌دهد زمان واقعی شما در هر مورد با تخمین شما چقدر فرق دارد. این سیگنال اصلی انحراف است.' },
+        { title: 'اصلاحات', body: 'اگر اشتباهی در تاریخچه می‌بینید می‌توانید اصلاح کنید. اصلی هرگز حذف نمی‌شود. هر دو نسخه حفظ می‌شوند.' },
+      ],
+    },
+    concepts: {
+      title: 'مفاهیم کلیدی',
+      subtitle: 'روی هر واژه بزنید تا باز شود.',
+      items: [
+        { term: 'سفر (Journey)', body: 'زمینه‌ای بلندمدت که همه کارهای یک حوزه را در بر می‌گیرد. جلسات دقیقاً به یک سفر تعلق دارند.' },
+        { term: 'مورد (Node)', body: 'هر واحد کاری — پروژه، وظیفه، نقطه عطف یا یادداشت. داخل سفرها قرار می‌گیرند و می‌توانند تو در تو باشند.' },
+        { term: 'جلسه (Session)', body: 'یک دوره کاری با نیت اعلام‌شده. نیت از ابتدا قفل می‌شود.' },
+        { term: 'نیت (غیرقابل تغییر)', body: 'تعهدی که در ابتدای جلسه می‌دهید. یک بار نوشته می‌شود و هرگز تغییر نمی‌کند. اگر تمرکزتان عوض شد، تجدیدنظر ثبت می‌کنید — اصلی می‌ماند.' },
+        { term: 'شرایط (Condition)', body: 'اوضاع لحظه ضربه: انرژی، تمرکز، مکان، محیط. چسبنده است — تا تغییرش ندهید همانطور می‌ماند.' },
+        { term: 'کشف (Discovery)', body: 'وقتی در میان جلسه چیز برنامه‌ریزی نشده‌ای ظاهر می‌شود. یک مورد جدید می‌سازد و ریشه‌اش را حفظ می‌کند.' },
+        { term: 'انحراف (Drift)', body: 'فاصله بین آنچه قصد داشتید و آنچه واقعاً اتفاق افتاد. انحراف اطلاعات است، نه شکست.' },
+        { term: 'توقف طبقه‌بندی نشده', body: 'زمان بین ضربه‌ها که به هیچ وظیفه‌ای نسبت داده نشده. سیستم آن را ثبت می‌کند؛ طبقه‌بندی بعداً می‌آید.' },
+        { term: 'گزارش حسابرسی', body: 'هر تغییر داده یک رویداد ایجاد می‌کند که هرگز تغییر یا حذف نمی‌شود. اصلاحات اضافه می‌کنند — هرگز بازنویسی نمی‌کنند.' },
+      ],
+    },
+  },
+} as const;
+
+type StepId = 'WHERE_AM_I' | 'FIRST_JOURNEY' | 'FIRST_SESSION' | 'DURING_SESSION' | 'AFTER_SESSION' | 'CONCEPTS';
+
+interface ConceptProps { term: string; body: string }
+const Concept: React.FC<ConceptProps> = ({ term, body }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <button onClick={() => setOpen(!open)} className="w-full text-left p-3.5 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-stone-900">{term}</span>
+        {open ? <ChevronDown className="w-3.5 h-3.5 text-stone-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-stone-400 shrink-0" />}
+      </div>
+      {open && <p className="text-xs text-stone-600 leading-relaxed mt-2 pt-2 border-t border-stone-200">{body}</p>}
+    </button>
+  );
+};
+
+interface NavCardProps { icon: React.ReactNode; label: string; description: string; tab: NavTab; onNavigate: (tab: NavTab) => void }
+const NavCard: React.FC<NavCardProps> = ({ icon, label, description, tab, onNavigate }) => (
+  <button onClick={() => onNavigate(tab)} className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 bg-white hover:border-stone-400 transition-all text-left w-full cursor-pointer group">
+    <div className="p-2 rounded-lg bg-stone-100 text-stone-700 group-hover:bg-stone-900 group-hover:text-white transition-colors shrink-0">{icon}</div>
+    <div className="min-w-0">
+      <div className="text-xs font-semibold text-stone-900">{label}</div>
+      <div className="text-2xs text-stone-500 truncate">{description}</div>
+    </div>
+    <ArrowRight className="w-3.5 h-3.5 text-stone-400 shrink-0 ml-auto" />
+  </button>
+);
+
+const actionIcons = [
+  <Play className="w-3.5 h-3.5" />,
+  <CheckCircle className="w-3.5 h-3.5" />,
+  <Shuffle className="w-3.5 h-3.5" />,
+  <Lightbulb className="w-3.5 h-3.5" />,
+  <Lock className="w-3.5 h-3.5" />,
+  <Eye className="w-3.5 h-3.5" />,
+];
+
+export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTab, onOpenStartSession }) => {
+  const [step, setStep] = useState<StepId>('WHERE_AM_I');
+  const c = content[lang];
+  const steps = c.steps;
+  const currentIndex = steps.findIndex(s => s.id === step);
+
+  const navLabels: Record<NavTab, string> = {
+    GUIDE:     lang === 'fa' ? 'راهنما' : 'Guide',
+    HIERARCHY: lang === 'fa' ? 'برنامه' : 'Plan',
+    SESSION:   lang === 'fa' ? 'جلسه'  : 'Session',
+    HISTORY:   lang === 'fa' ? 'تاریخچه' : 'History',
+    QUERIES:   lang === 'fa' ? 'پرس‌وجو' : 'Queries',
+    AUDIT:     lang === 'fa' ? 'گزارش' : 'Audit',
+  };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Header Banner - Telegram / Meta style elevated header */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs font-semibold">
-              <BookOpen className="w-3.5 h-3.5 text-stone-900" />
-              <span>Interactive User Guide & Prototype Manual</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">
-              Welcome to Human Drift
-            </h2>
-            <p className="text-sm text-stone-600 leading-relaxed">
-              An R&D prototype investigating <strong>plan-execution drift</strong> by preserving
-              intention, logging reality with zero friction, and maintaining continuity of meaning.
-              Designed with <strong>Telegram & Meta mobile-first principles</strong> for fast,
-              reliable testing on phones and desktops alike.
-            </p>
-          </div>
+    <div className="max-w-2xl mx-auto space-y-4 pb-16">
 
-          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
-            <button
-              onClick={() => onNavigateTab('SESSION')}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Jump into Active Session</span>
-            </button>
-            <button
-              onClick={() => onNavigateTab('HIERARCHY')}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition-all active:scale-98 cursor-pointer"
-            >
-              <FolderTree className="w-3.5 h-3.5" />
-              <span>Explore Work Tree</span>
-            </button>
+      {/* Header */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-stone-900 text-white rounded-xl"><Compass className="w-4 h-4" /></div>
+          <div>
+            <h2 className="text-sm font-bold text-stone-900">Human Drift</h2>
+            <p className="text-2xs text-stone-500">{lang === 'fa' ? 'راهنما' : 'Guide'}</p>
           </div>
         </div>
-
-        {/* Telegram-style Segmented Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-6 mt-6 border-t border-stone-100 no-scrollbar">
-          {[
-            { id: 'OVERVIEW', label: '1. What is Human Drift?', icon: Compass },
-            { id: 'TABS', label: '2. What Does Each Tab Do?', icon: Layers },
-            { id: 'JOURNEYS', label: '3. The Two Clarified Journeys', icon: Train },
-            { id: 'PRINCIPLES', label: '4. Core Architecture Rules', icon: ShieldCheck },
-            { id: 'MOBILE_UX', label: '5. Mobile-First (Telegram & Meta)', icon: Smartphone },
-            { id: 'TEST_CHECKLIST', label: '6. 3-Minute Testing Checklist', icon: CheckCircle2 },
-          ].map((sec) => {
-            const Icon = sec.icon;
-            const isActive = selectedSection === sec.id;
-            return (
-              <button
-                key={sec.id}
-                onClick={() => setSelectedSection(sec.id as any)}
-                className={`px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                  isActive
-                    ? 'bg-stone-900 text-white shadow-xs'
-                    : 'bg-stone-100 text-stone-600 hover:text-stone-900 hover:bg-stone-200/70'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{sec.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {steps.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => setStep(s.id as StepId)}
+              className={`px-3 py-1.5 rounded-lg text-2xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                step === s.id ? 'bg-stone-900 text-white' : i < currentIndex ? 'bg-stone-100 text-stone-500 hover:bg-stone-200' : 'bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600'
+              }`}
+            >
+              {i < currentIndex && <CheckCircle className="w-3 h-3 inline mr-1 text-stone-400" />}
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* SECTION 1: OVERVIEW */}
-      {selectedSection === 'OVERVIEW' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-3 md:col-span-2">
-            <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
-              <Compass className="w-4 h-4 text-stone-900" />
-              The Mission: Continuity of Meaning
-            </h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              Most tools force a choice: you are either rigidly following an outdated plan, or you
-              are drowning in untracked chaos. <strong>Human Drift</strong> is built on a different
-              premise:
-            </p>
-            <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-2 text-xs font-serif text-stone-800 italic">
-              <div>"Preserve what was intended."</div>
-              <div>"Log what actually happened."</div>
-              <div className="font-sans font-semibold not-italic text-stone-900">
-                → And preserve the relationship between them with zero retroactive whitewashing.
-              </div>
-            </div>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              When work veers off course, it is not a "failure" to be erased. It is evidence.
-              Discoveries, interruptions, and pivots are captured as first-class domain entities.
-            </p>
-          </div>
+      {/* Step content */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
 
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-3">
-            <h3 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              What This Is NOT
-            </h3>
-            <ul className="text-xs text-stone-600 space-y-2.5">
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></span>
-                <span><strong>Not a todo list:</strong> We don't just check off checkboxes; we measure drift.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></span>
-                <span><strong>Not a gamified habit tracker:</strong> No fake streaks, no point systems.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></span>
-                <span><strong>Not an automatic spy:</strong> Manual, conscious, 1-tap deliberate input.</span>
-              </li>
-            </ul>
+        {step === 'WHERE_AM_I' && (() => { const d = c.whereAmI; return (<>
+          <div>
+            <h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">{d.body}</p>
           </div>
-        </div>
-      )}
-
-      {/* SECTION 2: WHAT DOES EACH TAB DO? */}
-      {selectedSection === 'TABS' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-stone-900 text-white rounded-2xl flex items-center justify-between">
-            <div>
-              <div className="text-sm font-bold">Comprehensive Tab Navigation Map</div>
-              <p className="text-xs text-stone-300">
-                Here is exactly what each of the 5 primary views accomplishes in the prototype.
-              </p>
+          <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl text-xs text-stone-700 italic leading-relaxed">"{d.quote}"</div>
+          <div className="space-y-2">
+            <p className="text-2xs font-semibold text-stone-500">{d.navTitle}</p>
+            <div className="grid grid-cols-1 gap-2">
+              <NavCard icon={<FolderTree className="w-3.5 h-3.5" />} label={navLabels.HIERARCHY} description={lang === 'fa' ? 'پروژه‌ها و وظایف شما — برنامه' : 'Your projects and tasks — the plan'} tab="HIERARCHY" onNavigate={onNavigateTab} />
+              <NavCard icon={<Play className="w-3.5 h-3.5" />} label={navLabels.SESSION} description={lang === 'fa' ? 'ثبت آنچه الان اتفاق می‌افتد' : 'Log what is happening right now'} tab="SESSION" onNavigate={onNavigateTab} />
+              <NavCard icon={<History className="w-3.5 h-3.5" />} label={navLabels.HISTORY} description={lang === 'fa' ? 'هر جلسه گذشته، با زمان‌بندی' : 'Every past session, timestamped'} tab="HISTORY" onNavigate={onNavigateTab} />
+              <NavCard icon={<BarChart2 className="w-3.5 h-3.5" />} label={navLabels.QUERIES} description={lang === 'fa' ? 'زمان واقعی در مقابل تخمین، پیشرفت' : 'Actual vs estimated time, progress'} tab="QUERIES" onNavigate={onNavigateTab} />
+              <NavCard icon={<ShieldCheck className="w-3.5 h-3.5" />} label={navLabels.AUDIT} description={lang === 'fa' ? 'هر تغییر، فقط الحاق' : 'Every mutation, append-only'} tab="AUDIT" onNavigate={onNavigateTab} />
             </div>
           </div>
+        </>); })()}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tab 1 */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-stone-100 text-stone-900">
-                    <FolderTree className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-stone-900">Tab 1: Work Tree (Hierarchy)</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('HIERARCHY')}
-                  className="text-2xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 cursor-pointer"
-                >
-                  Open View <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Represents your <strong>planned structure of work</strong>. Each Journey contains a
-                tree of Nodes (Tasks, Projects, Milestones, and Notes).
-              </p>
-              <ul className="text-2xs text-stone-600 space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200/70">
-                <li>• <strong>Duration Estimates:</strong> Assign planned minutes to compare later against reality.</li>
-                <li>• <strong>Sub-Node Nesting:</strong> Break down high-level projects into discrete units.</li>
-                <li>• <strong>Quick Action:</strong> Click the <em>Play</em> icon next to any node to start working immediately.</li>
-              </ul>
-            </div>
-
-            {/* Tab 2 */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
-                    <Play className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-stone-900">Tab 2: Active Session (Logger)</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('SESSION')}
-                  className="text-2xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 cursor-pointer"
-                >
-                  Open View <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Your <strong>real-time cockpit</strong> while doing active work. Built for 1-tap thumb interactions.
-              </p>
-              <ul className="text-2xs text-stone-600 space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200/70">
-                <li>• <strong>Intention Locking:</strong> Your declared intention is locked at the start and never overwritten.</li>
-                <li>• <strong>1-Tap Action Bar:</strong> Start Task, Pause, Switch Context, Switch Journey, Log Discovery, Revise Intention.</li>
-                <li>• <strong>Sticky Conditions:</strong> 1-tap toggles for Energy, Focus, Location, and Environment.</li>
-              </ul>
-            </div>
-
-            {/* Tab 3 */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-purple-100 text-purple-800">
-                    <History className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-stone-900">Tab 3: Session History</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('HISTORY')}
-                  className="text-2xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 cursor-pointer"
-                >
-                  Open View <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Chronological ledger of past working periods, reflections, and quality ratings.
-              </p>
-              <ul className="text-2xs text-stone-600 space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200/70">
-                <li>• <strong>First-Class Gap Intervals:</strong> Inspect exact Unclassified Context Pauses between tasks.</li>
-                <li>• <strong>Append-Only Corrections:</strong> Fix typos or timestamps without destroying original recorded facts.</li>
-                <li>• <strong>Conflict Resolution:</strong> Review and resolve overlapping session anomalies.</li>
-              </ul>
-            </div>
-
-            {/* Tab 4 */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-sky-100 text-sky-800">
-                    <BarChart2 className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-stone-900">Tab 4: Priority Queries</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('QUERIES')}
-                  className="text-2xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 cursor-pointer"
-                >
-                  Open View <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Empirical answers to the core research questions of the prototype.
-              </p>
-              <ul className="text-2xs text-stone-600 space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200/70">
-                <li>• <strong>Query 1 (Actual vs Estimate):</strong> Calculates true active duration computed from paired session events vs estimated minutes.</li>
-                <li>• <strong>Query 2 (Program Progress):</strong> Real-time breakdown of planned, in-progress, and completed work across the journey.</li>
-              </ul>
-            </div>
-
-            {/* Tab 5 */}
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-2.5 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-900">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-stone-900">Tab 5: Audit Log (Immutable Event Ledger)</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('AUDIT')}
-                  className="text-2xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1 cursor-pointer"
-                >
-                  Open View <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                The cryptographic and historical backbone. Every state mutation (session start, node
-                creation, estimate revision, context switch) generates an append-only event record with
-                an actor ID and UTC ISO timestamp. Guarantees complete auditability and zero data loss.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 3: THE TWO CLARIFIED JOURNEYS */}
-      {selectedSection === 'JOURNEYS' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-1">
-            <h3 className="text-sm font-bold text-stone-900">The Two Pre-Seeded Demonstration Journeys</h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              Human Drift is designed to test both <strong>physical transit drift</strong> and
-              <strong>cognitive research workflow drift</strong>. Both journeys are pre-configured
-              and can be switched via the top header switcher:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Journey 1: Train Performance Study */}
-            <div className="bg-white border-2 border-stone-300 hover:border-stone-900 rounded-2xl p-6 shadow-xs space-y-4 transition-all">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl p-2 bg-stone-100 rounded-xl">🚆</span>
-                <div>
-                  <span className="text-2xs font-mono uppercase tracking-wider text-stone-500 font-semibold">
-                    Physical Domain Drift
-                  </span>
-                  <h4 className="text-base font-bold text-stone-900">
-                    Train Performance Study
-                  </h4>
-                </div>
-              </div>
-
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Investigates schedule vs. actual arrival drift, station dwell times, and departure
-                variance across a mainline passenger rail corridor.
-              </p>
-
-              <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200 text-xs">
-                <div className="font-semibold text-stone-800 text-2xs uppercase tracking-wider">
-                  Pre-Configured Stations & Segments:
-                </div>
-                <ul className="text-2xs text-stone-600 space-y-1">
-                  <li>• Central Terminal Platform 4 Departure (Est: 15m · Completed)</li>
-                  <li>• Express Mainline Transit Segment (Est: 25m · Completed)</li>
-                  <li>• Midtown Station Dwell & Passenger Transfer (Est: 10m · Completed)</li>
-                  <li>• North Interlocking Signal Clearance & Switch (In Progress)</li>
-                  <li>• North Terminal Arrival & Reconciliation (Planned)</li>
-                </ul>
-              </div>
-
-              <div className="p-3 bg-stone-100/80 rounded-xl text-2xs text-stone-700 font-medium">
-                <strong>Why it matters:</strong> Shows how physical scheduled operations experience
-                delays and dwell time variance that can be captured with zero guesswork.
-              </div>
-
-              <button
-                onClick={() => {
-                  if (onSelectJourney) onSelectJourney('jrn-train-commuter-corridor');
-                  onNavigateTab('HIERARCHY');
-                }}
-                className="w-full py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Switch to Train Journey</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Journey 2: User Journey 002 */}
-            <div className="bg-white border-2 border-stone-300 hover:border-stone-900 rounded-2xl p-6 shadow-xs space-y-4 transition-all">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl p-2 bg-stone-100 rounded-xl">🔬</span>
-                <div>
-                  <span className="text-2xs font-mono uppercase tracking-wider text-stone-500 font-semibold">
-                    Cognitive Knowledge Work Drift
-                  </span>
-                  <h4 className="text-base font-bold text-stone-900">
-                    User Journey 002 — R&D Work Logger
-                  </h4>
-                </div>
-              </div>
-
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Investigates cognitive drift in deep research and system engineering by preserving
-                starting intentions, recording pivot revisions, and capturing unclassified pauses.
-              </p>
-
-              <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200 text-xs">
-                <div className="font-semibold text-stone-800 text-2xs uppercase tracking-wider">
-                  Pre-Configured Work Hierarchy:
-                </div>
-                <ul className="text-2xs text-stone-600 space-y-1">
-                  <li>• Implement Domain Model v1 (Est: 60m · Completed)</li>
-                  <li>• Atomic File Writes & Storage Resilience (Est: 45m · Completed)</li>
-                  <li>• Cross-Journey Transition Verification (AD-002) (Planned)</li>
-                  <li>• Telegram & Meta Mobile-First Ergonomics (In Progress)</li>
-                </ul>
-              </div>
-
-              <div className="p-3 bg-stone-100/80 rounded-xl text-2xs text-stone-700 font-medium">
-                <strong>Why it matters:</strong> Validates that emergent thoughts ("Discoveries") and
-                pivots ("Intention Revisions") do not corrupt the original plan history.
-              </div>
-
-              <button
-                onClick={() => {
-                  if (onSelectJourney) onSelectJourney('jrn-df2a6498-333b-47e0-890d-a0446a35e192');
-                  onNavigateTab('HIERARCHY');
-                }}
-                className="w-full py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Switch to User Journey 002</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 4: CORE ARCHITECTURE RULES */}
-      {selectedSection === 'PRINCIPLES' && (
-        <div className="space-y-4">
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 className="text-base font-bold text-stone-900">Foundational Architectural Decisions</h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              These decisions govern how reality is represented in the database and user interface.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-stone-900 font-semibold text-xs">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span>Decision 1: Gap-Time Accounting</span>
-                </div>
-                <p className="text-2xs text-stone-600 leading-relaxed">
-                  Default gap time between task entries to <strong>Unclassified Context Pause</strong>,
-                  not "untracked overhead".
-                </p>
-                <div className="p-2.5 bg-white border border-stone-200 rounded-lg text-2xs text-stone-700 font-mono">
-                  Observed fact → Recorded event → Current state → Inference
-                </div>
-                <p className="text-2xs text-stone-500">
-                  Calling a 45-minute pause "overhead" is a biased guess. Leaving it as an unclassified pause
-                  is an objective fact.
-                </p>
-              </div>
-
-              <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-stone-900 font-semibold text-xs">
-                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                  <span>Decision 2: Cross-Journey Scope</span>
-                </div>
-                <p className="text-2xs text-stone-600 leading-relaxed">
-                  A Session belongs to <strong>exactly one Journey</strong>. Crossing into another Journey
-                  completes the current session and creates a linked successor session.
-                </p>
-                <div className="p-2.5 bg-white border border-stone-200 rounded-lg text-2xs text-stone-700 font-mono">
-                  Session A [Journey 1] → Linked Successor Session B [Journey 2]
-                </div>
-                <p className="text-2xs text-stone-500">
-                  Preserves clean analytical boundaries for Query 1 and Query 2 without messy multi-parent ambiguity.
-                </p>
-              </div>
-
-              <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-stone-900 font-semibold text-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>Rule 2: Immutable Intention</span>
-                </div>
-                <p className="text-2xs text-stone-600 leading-relaxed">
-                  The initial intention declared when beginning a session is locked permanently. If your
-                  focus shifts, you tap <strong>Revise Intention</strong> to record the pivot.
-                </p>
-              </div>
-
-              <div className="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2 text-stone-900 font-semibold text-xs">
-                  <span className="w-2 h-2 rounded-full bg-sky-500"></span>
-                  <span>Rule 3: Append-Only Corrections</span>
-                </div>
-                <p className="text-2xs text-stone-600 leading-relaxed">
-                  Corrections never overwrite original database rows. They append a correction log
-                  preserving the original value, timestamp, and human rationale.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 5: TELEGRAM & META MOBILE-FIRST DESIGN */}
-      {selectedSection === 'MOBILE_UX' && (
-        <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 text-stone-900 font-bold text-base">
-            <Smartphone className="w-5 h-5 text-stone-800" />
-            <span>Telegram & Meta Mobile-First Ergonomics</span>
-          </div>
-
-          <p className="text-xs text-stone-600 leading-relaxed">
-            In our R&D architecture, the <strong>laptop serves as the server</strong> and the
-            <strong>smartphone is the primary client via local WiFi</strong>. The interface is optimized
-            specifically for thumb interactions:
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
-              <div className="font-semibold text-xs text-stone-900">Sticky Bottom Navigation</div>
-              <p className="text-2xs text-stone-600">
-                On mobile screens, navigation moves to a fixed thumb-accessible bottom bar with 48px touch targets,
-                mirroring Telegram and Instagram navigation.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
-              <div className="font-semibold text-xs text-stone-900">Telegram Chat-Stream Cards</div>
-              <p className="text-2xs text-stone-600">
-                Active session entries and history items are styled like message bubbles with clear timestamps,
-                high-contrast status badges, and zero visual clutter.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
-              <div className="font-semibold text-xs text-stone-900">1-Tap Environmental Chips</div>
-              <p className="text-2xs text-stone-600">
-                Energy (High/Normal/Low) and Focus (Deep/Normal/Scattered) toggle in a single tap without
-                opening heavy modals or interrupting workflow.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 6: 3-MINUTE TESTING CHECKLIST */}
-      {selectedSection === 'TEST_CHECKLIST' && (
-        <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-stone-900">The 3-Minute Tester Walkthrough</h3>
-              <p className="text-xs text-stone-500">
-                Follow these exact steps to test the full lifecycle of the Human Drift prototype.
-              </p>
-            </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
-              Ready to Test
-            </span>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {[
-              {
-                step: 'Step 1',
-                title: 'Select a Journey from the Header Switcher',
-                desc: 'Toggle between "🚆 Train Performance Study" and "🔬 User Journey 002". Notice how nodes and context immediately adapt.',
-                actionLabel: 'Go to Work Tree',
-                onAction: () => onNavigateTab('HIERARCHY'),
-              },
-              {
-                step: 'Step 2',
-                title: 'Start a Session & Lock Intention',
-                desc: 'Select a task from the Work Tree and tap "Start Session". Enter your intention. Notice that the intention is permanently locked.',
-                actionLabel: 'Start Session',
-                onAction: () => {
-                  if (onOpenStartSession) onOpenStartSession();
-                  else onNavigateTab('SESSION');
-                },
-              },
-              {
-                step: 'Step 3',
-                title: 'Log Actions in Active Session',
-                desc: 'Tap "Pause" to see how unclassified context pauses are tracked. Tap "Log Discovery" to create emergent work without losing lineage. Tap "Switch Journey" to test cross-journey session transitions (AD-002).',
-                actionLabel: 'Go to Active Session',
-                onAction: () => onNavigateTab('SESSION'),
-              },
-              {
-                step: 'Step 4',
-                title: 'End Session & Inspect History & Queries',
-                desc: 'Tap "Complete & Save Session", add a reflection, and open "Priority Queries" to observe Query 1 (Actual vs Estimate) calculate real durations.',
-                actionLabel: 'View Priority Queries',
-                onAction: () => onNavigateTab('QUERIES'),
-              },
-            ].map((s, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-xl bg-stone-50 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div className="space-y-1 max-w-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xs font-mono font-bold px-2 py-0.5 rounded-md bg-stone-200 text-stone-800">
-                      {s.step}
-                    </span>
-                    <h5 className="text-xs font-bold text-stone-900">{s.title}</h5>
-                  </div>
-                  <p className="text-2xs text-stone-600 leading-relaxed">{s.desc}</p>
-                </div>
-                <button
-                  onClick={s.onAction}
-                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg text-xs font-semibold text-stone-800 transition-all shrink-0 cursor-pointer shadow-2xs"
-                >
-                  <span>{s.actionLabel}</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
+        {step === 'FIRST_JOURNEY' && (() => { const d = c.firstJourney; return (<>
+          <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
+          <div className="space-y-3">
+            {d.steps.map((s, i) => (
+              <div key={i} className="flex gap-3 items-start p-3.5 rounded-xl border border-stone-200 bg-stone-50">
+                <div className="w-6 h-6 rounded-full bg-stone-900 text-white text-2xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</div>
+                <div><p className="text-xs font-semibold text-stone-900">{s.title}</p><p className="text-2xs text-stone-600 mt-0.5 leading-relaxed">{s.body}</p></div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+          <button onClick={() => onNavigateTab('HIERARCHY')} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+            <FolderTree className="w-3.5 h-3.5" /><span>{d.cta}</span>
+          </button>
+        </>); })()}
+
+        {step === 'FIRST_SESSION' && (() => { const d = c.firstSession; return (<>
+          <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
+          <div className="space-y-3">
+            {d.steps.map((s, i) => (
+              <div key={i} className="flex gap-3 items-start p-3.5 rounded-xl border border-stone-200 bg-stone-50">
+                {[<Lock />, <Zap />, <Play />][i] && <div className="w-4 h-4 text-stone-600 shrink-0 mt-0.5">{[<Lock className="w-4 h-4" />, <Zap className="w-4 h-4" />, <Play className="w-4 h-4" />][i]}</div>}
+                <div><p className="text-xs font-semibold text-stone-900">{s.title}</p><p className="text-2xs text-stone-600 mt-0.5 leading-relaxed">{s.body}</p></div>
+              </div>
+            ))}
+          </div>
+          <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50 text-2xs text-stone-600 leading-relaxed">{d.tip}</div>
+          <button onClick={() => { if (onOpenStartSession) onOpenStartSession(); else onNavigateTab('SESSION'); }} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+            <Play className="w-3.5 h-3.5 fill-current" /><span>{d.cta}</span>
+          </button>
+        </>); })()}
+
+        {step === 'DURING_SESSION' && (() => { const d = c.duringSession; return (<>
+          <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
+          <div className="space-y-2">
+            {d.actions.map((a, i) => (
+              <div key={i} className="flex gap-3 items-start p-3 rounded-xl border border-stone-200 bg-stone-50">
+                <div className="p-1.5 rounded-lg bg-white border border-stone-200 text-stone-600 shrink-0">{actionIcons[i]}</div>
+                <div><p className="text-xs font-semibold text-stone-900">{a.label}</p><p className="text-2xs text-stone-600 leading-relaxed">{a.body}</p></div>
+              </div>
+            ))}
+          </div>
+          <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50 text-2xs text-stone-600 leading-relaxed">{d.gap}</div>
+          <button onClick={() => onNavigateTab('SESSION')} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+            <Play className="w-3.5 h-3.5" /><span>{d.cta}</span>
+          </button>
+        </>); })()}
+
+        {step === 'AFTER_SESSION' && (() => { const d = c.afterSession; return (<>
+          <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
+          <div className="space-y-3">
+            {d.steps.map((s, i) => (
+              <div key={i} className="flex gap-3 items-start p-3.5 rounded-xl border border-stone-200 bg-stone-50">
+                <div className="w-4 h-4 text-stone-600 shrink-0 mt-0.5">{[<PlusCircle className="w-4 h-4" />, <History className="w-4 h-4" />, <BarChart2 className="w-4 h-4" />, <Eye className="w-4 h-4" />][i]}</div>
+                <div><p className="text-xs font-semibold text-stone-900">{s.title}</p><p className="text-2xs text-stone-600 mt-0.5 leading-relaxed">{s.body}</p></div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onNavigateTab('HISTORY')} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold cursor-pointer"><History className="w-3.5 h-3.5" /><span>{navLabels.HISTORY}</span></button>
+            <button onClick={() => onNavigateTab('QUERIES')} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold cursor-pointer"><BarChart2 className="w-3.5 h-3.5" /><span>{navLabels.QUERIES}</span></button>
+          </div>
+        </>); })()}
+
+        {step === 'CONCEPTS' && (() => { const d = c.concepts; return (<>
+          <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 mb-3">{d.subtitle}</p></div>
+          <div className="space-y-2">{d.items.map((item, i) => <Concept key={i} term={item.term} body={item.body} />)}</div>
+        </>); })()}
+      </div>
+
+      {/* Footer nav */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => setStep(steps[currentIndex - 1]?.id as StepId)} disabled={currentIndex === 0} className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+          {c.prev}
+        </button>
+        <span className="text-2xs text-stone-400">{currentIndex + 1} / {steps.length}</span>
+        {currentIndex < steps.length - 1 ? (
+          <button onClick={() => setStep(steps[currentIndex + 1]?.id as StepId)} className="px-4 py-2 text-xs font-semibold text-stone-900 cursor-pointer">{c.next}</button>
+        ) : (
+          <button onClick={() => onNavigateTab('HIERARCHY')} className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-semibold cursor-pointer">{c.done}</button>
+        )}
+      </div>
     </div>
   );
 };

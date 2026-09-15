@@ -27,8 +27,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Initial Condition
-  const [energy, setEnergy] = useState<EnergyLevel>('HIGH');
-  const [focus, setFocus] = useState<FocusLevel>('DEEP');
+  const [energy, setEnergy] = useState<EnergyLevel>('MEDIUM');
+  const [focus, setFocus] = useState<FocusLevel>('NORMAL');
   const [location, setLocation] = useState<LocationType>('HOME');
   const [environment, setEnvironment] = useState<EnvironmentType>('QUIET');
 

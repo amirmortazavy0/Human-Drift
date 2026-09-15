@@ -30,8 +30,8 @@ class Node(BaseModel):
     note: Optional[str] = None
 
 class Condition(BaseModel):
-    energy: str = "HIGH"
-    focus: str = "DEEP"
+    energy: str = "MEDIUM"
+    focus: str = "NORMAL"
     location: str = "HOME"
     environment: str = "QUIET"
     custom_note: Optional[str] = None

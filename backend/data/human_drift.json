@@ -1,404 +1,88 @@
 {
   "version": "1.0",
-  "created_at": "2026-09-11T11:33:45.144562+00:00",
+  "created_at": "2026-09-14T22:17:46.006366+00:00",
   "journeys": [
     {
-      "id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "name": "🔬 User Journey 002 — R&D Work Logger",
-      "description": "User Journey 002: Investigating plan-execution drift in deep engineering and research work by preserving intention, logging reality, and capturing unclassified pause intervals.",
+      "id": "jrn-91b8c250-1219-468d-a902-a64cd8d2a407",
+      "name": "Human Drift R&D",
+      "description": null,
       "owner_id": "00000000-0000-0000-0000-000000000001",
       "visibility": "PRIVATE",
       "status": "ACTIVE",
-      "created_at": "2026-09-14T10:21:10.837Z",
-      "completed_at": null
-    },
-    {
-      "id": "jrn-train-commuter-corridor",
-      "name": "🚆 Train Performance Study — Mainline Corridor",
-      "description": "Investigating schedule vs. actual arrival drift, station dwell times, and departure variance across physical transit network.",
-      "owner_id": "00000000-0000-0000-0000-000000000001",
-      "visibility": "PRIVATE",
-      "status": "ACTIVE",
-      "created_at": "2026-09-14T08:00:00.000Z",
+      "created_at": "2026-09-14T22:45:34.345Z",
       "completed_at": null
     }
   ],
   "nodes": [
     {
-      "id": "nod-b1a6ef37-6739-409f-989d-dceffb9b8f78",
-      "journey_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
+      "id": "nod-157c9874-11d5-4563-b309-d09868385796",
+      "journey_id": "jrn-91b8c250-1219-468d-a902-a64cd8d2a407",
       "parent_id": null,
-      "node_type": "TASK",
-      "name": "Implement Domain Model v1",
-      "description": "Core domain entities: Journey, Node, Session, SessionEntry, Correction, EventLog",
-      "status": "COMPLETE",
-      "sequence": 1,
-      "estimated_minutes": 60,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T10:21:15.190Z",
-      "completed_at": "2026-09-14T11:15:00.000Z",
-      "note": "Completed with strict Pydantic and TypeScript type synchronization"
-    },
-    {
-      "id": "nod-70357104-8ca7-4436-8ca0-06a6ac38179f",
-      "journey_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Atomic File Writes & Storage Resilience",
-      "description": "Discovered in session ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95: atomic .tmp + os.replace + rolling backup",
-      "status": "COMPLETE",
-      "sequence": 2,
-      "estimated_minutes": 45,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T10:21:22.656Z",
-      "completed_at": "2026-09-14T11:55:00.000Z",
-      "note": null
-    },
-    {
-      "id": "nod-uj02-cross-journey",
-      "journey_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Cross-Journey Transition Verification (AD-002)",
-      "description": "Verify session boundary preservation and predecessor/successor session linking",
+      "node_type": "PROJECT",
+      "name": "Research use cases & build a proof of concept",
+      "description": null,
       "status": "PLANNED",
-      "sequence": 3,
-      "estimated_minutes": 30,
-      "done_type": "VERIFICATION",
+      "sequence": null,
+      "estimated_minutes": null,
+      "done_type": null,
       "due_date": null,
-      "created_at": "2026-09-14T11:00:00.000Z",
-      "completed_at": null,
-      "note": null
-    },
-    {
-      "id": "nod-uj02-mobile-ux",
-      "journey_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Telegram & Meta Mobile-First Ergonomics",
-      "description": "Fixed bottom bar, 48px touch targets, Telegram event cards, clear guidance for phone testers",
-      "status": "IN_PROGRESS",
-      "sequence": 4,
-      "estimated_minutes": 40,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T11:05:00.000Z",
-      "completed_at": null,
-      "note": null
-    },
-    {
-      "id": "nod-train-01-departure",
-      "journey_id": "jrn-train-commuter-corridor",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Central Terminal Platform 4 Departure (Scheduled 08:00)",
-      "description": "Boarding, clearance check, and scheduled pushback from Central Terminal",
-      "status": "COMPLETE",
-      "sequence": 1,
-      "estimated_minutes": 15,
-      "done_type": "MILESTONE",
-      "due_date": null,
-      "created_at": "2026-09-14T08:00:00.000Z",
-      "completed_at": "2026-09-14T08:18:00.000Z",
-      "note": "Departed +3 min late due to late incoming crew connection"
-    },
-    {
-      "id": "nod-train-02-express-transit",
-      "journey_id": "jrn-train-commuter-corridor",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Express Mainline Transit Segment (Harbor Flyover)",
-      "description": "High-speed line transit between Central Terminal and Midtown Junction",
-      "status": "COMPLETE",
-      "sequence": 2,
-      "estimated_minutes": 25,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T08:00:00.000Z",
-      "completed_at": "2026-09-14T08:46:00.000Z",
-      "note": "Speed restriction on bridge incurred additional 3 min drift"
-    },
-    {
-      "id": "nod-train-03-midtown-dwell",
-      "journey_id": "jrn-train-commuter-corridor",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "Midtown Station Dwell & Passenger Transfer",
-      "description": "Platform dwell time, commuter transfers to suburban feeder line",
-      "status": "COMPLETE",
-      "sequence": 3,
-      "estimated_minutes": 10,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T08:00:00.000Z",
-      "completed_at": "2026-09-14T08:58:00.000Z",
-      "note": "Platform crowding extended dwell by 2 minutes"
-    },
-    {
-      "id": "nod-train-04-north-interlocking",
-      "journey_id": "jrn-train-commuter-corridor",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "North Interlocking Signal Clearance & Switch",
-      "description": "Track crossing switch clearance prior to North Terminal arrival",
-      "status": "IN_PROGRESS",
-      "sequence": 4,
-      "estimated_minutes": 15,
-      "done_type": "VERIFICATION",
-      "due_date": null,
-      "created_at": "2026-09-14T08:00:00.000Z",
-      "completed_at": null,
-      "note": "Holding at signal 42B for freight train priority crossover"
-    },
-    {
-      "id": "nod-train-05-arrival-reconciliation",
-      "journey_id": "jrn-train-commuter-corridor",
-      "parent_id": null,
-      "node_type": "TASK",
-      "name": "North Station Terminal Arrival & Drift Reconciliation",
-      "description": "Final arrival platform recording, schedule vs actual timetable drift comparison",
-      "status": "PLANNED",
-      "sequence": 5,
-      "estimated_minutes": 20,
-      "done_type": "DELIVERABLE",
-      "due_date": null,
-      "created_at": "2026-09-14T08:00:00.000Z",
+      "created_at": "2026-09-14T22:45:34.377Z",
       "completed_at": null,
       "note": null
     }
   ],
-  "sessions": [
-    {
-      "id": "ses-train-run-104",
-      "journey_id": "jrn-train-commuter-corridor",
-      "label": "Peak Morning Transit Run #104",
-      "intention": "Track commuter train schedule vs. actual arrival drift across 4 stations",
-      "started_at": "2026-09-14T08:00:00.000Z",
-      "ended_at": "2026-09-14T09:05:00.000Z",
-      "status": "COMPLETE",
-      "end_reason": "NATURAL_COMPLETION",
-      "predecessor_session_id": null,
-      "successor_session_id": null,
-      "reflection": "Observed 8.5 min total cumulative drift from schedule. Major drift factors were boarding surge at Central Terminal and bridge speed restriction.",
-      "quality": "GOOD",
-      "note": "Clear evidence collected across physical station stops",
-      "created_at": "2026-09-14T08:00:00.000Z",
-      "updated_at": "2026-09-14T09:05:00.000Z"
-    },
-    {
-      "id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "journey_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "label": "Prototype Core Implementation Session",
-      "intention": "Verify R&D work logger end-to-end integration and data stability",
-      "started_at": "2026-09-14T10:21:18.219Z",
-      "ended_at": "2026-09-14T11:45:00.000Z",
-      "status": "COMPLETE",
-      "end_reason": "NATURAL_COMPLETION",
-      "predecessor_session_id": null,
-      "successor_session_id": null,
-      "reflection": "Completed Domain Model v1 and atomic storage pattern. Logged one discovery on atomic temp writes.",
-      "quality": "EXCELLENT",
-      "note": "High focus session in home office",
-      "created_at": "2026-09-14T10:21:18.219Z",
-      "updated_at": "2026-09-14T11:45:00.000Z"
-    }
-  ],
-  "entries": [
-    {
-      "id": "ent-trn-01",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-01-departure",
-      "entry_type": "TASK_STARTED",
-      "logged_at": "2026-09-14T08:00:00.000Z",
-      "note": "Commencing pushback protocol at Platform 4",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "TRANSIT",
-        "environment": "QUIET"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-trn-02",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-01-departure",
-      "entry_type": "TASK_COMPLETED",
-      "logged_at": "2026-09-14T08:18:00.000Z",
-      "note": "Clear of station throat. +3 min departure variance.",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "TRANSIT",
-        "environment": "AMBIENT"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-trn-03",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-02-express-transit",
-      "entry_type": "TASK_STARTED",
-      "logged_at": "2026-09-14T08:20:00.000Z",
-      "note": "Throttle up to 110 km/h on express mainline track",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "TRANSIT",
-        "environment": "AMBIENT"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-trn-04",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-02-express-transit",
-      "entry_type": "TASK_COMPLETED",
-      "logged_at": "2026-09-14T08:46:00.000Z",
-      "note": "Arrived outer switch zone",
-      "condition": {
-        "energy": "NORMAL",
-        "focus": "NORMAL",
-        "location": "TRANSIT",
-        "environment": "AMBIENT"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-trn-05",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-03-midtown-dwell",
-      "entry_type": "TASK_STARTED",
-      "logged_at": "2026-09-14T08:48:00.000Z",
-      "note": "Midtown Station platform doors open for transfer passenger boarding",
-      "condition": {
-        "energy": "NORMAL",
-        "focus": "NORMAL",
-        "location": "TRANSIT",
-        "environment": "NOISY"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-trn-06",
-      "session_id": "ses-train-run-104",
-      "node_id": "nod-train-03-midtown-dwell",
-      "entry_type": "TASK_COMPLETED",
-      "logged_at": "2026-09-14T08:58:00.000Z",
-      "note": "Platform doors locked. 10 min dwell recorded.",
-      "condition": {
-        "energy": "NORMAL",
-        "focus": "NORMAL",
-        "location": "TRANSIT",
-        "environment": "AMBIENT"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-81c67118-0c74-4678-a813-80b6680b404b",
-      "session_id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "node_id": "nod-b1a6ef37-6739-409f-989d-dceffb9b8f78",
-      "entry_type": "TASK_STARTED",
-      "logged_at": "2026-09-14T10:21:18.219Z",
-      "note": "Starting TypeScript and Pydantic domain models",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "HOME",
-        "environment": "QUIET"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-81c67118-0c74-4678-a813-80b6680b404c",
-      "session_id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "node_id": "nod-b1a6ef37-6739-409f-989d-dceffb9b8f78",
-      "entry_type": "TASK_COMPLETED",
-      "logged_at": "2026-09-14T11:15:00.000Z",
-      "note": "Domain Model v1 synchronization complete across server and client",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "HOME",
-        "environment": "QUIET"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-81c67118-0c74-4678-a813-80b6680b404d",
-      "session_id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "node_id": null,
-      "entry_type": "DISCOVERY",
-      "logged_at": "2026-09-14T11:20:00.000Z",
-      "note": "Identified critical requirement for atomic temporary file writes to prevent storage corruption",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "HOME",
-        "environment": "QUIET"
-      },
-      "discovery_ref": "nod-70357104-8ca7-4436-8ca0-06a6ac38179f"
-    },
-    {
-      "id": "ent-81c67118-0c74-4678-a813-80b6680b404e",
-      "session_id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "node_id": "nod-70357104-8ca7-4436-8ca0-06a6ac38179f",
-      "entry_type": "TASK_STARTED",
-      "logged_at": "2026-09-14T11:25:00.000Z",
-      "note": "Implementing atomic temp file + fsync + os.replace pattern",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "HOME",
-        "environment": "QUIET"
-      },
-      "discovery_ref": null
-    },
-    {
-      "id": "ent-81c67118-0c74-4678-a813-80b6680b404f",
-      "session_id": "ses-4de3b1f9-e4f1-4368-95e3-c617cb8fcd95",
-      "node_id": "nod-70357104-8ca7-4436-8ca0-06a6ac38179f",
-      "entry_type": "TASK_COMPLETED",
-      "logged_at": "2026-09-14T11:45:00.000Z",
-      "note": "Atomic write engine verified resilient against concurrent access",
-      "condition": {
-        "energy": "HIGH",
-        "focus": "DEEP",
-        "location": "HOME",
-        "environment": "QUIET"
-      },
-      "discovery_ref": null
-    }
-  ],
+  "sessions": [],
+  "entries": [],
   "corrections": [],
   "conflicts": [],
   "event_log": [
     {
-      "id": "evt-trn-01",
+      "id": "evt-9bb2cbc8-24be-4388-ab2b-f0251bee63c6",
       "entity_type": "Journey",
-      "entity_id": "jrn-train-commuter-corridor",
+      "entity_id": "jrn-91b8c250-1219-468d-a902-a64cd8d2a407",
       "event_type": "JOURNEY_CREATED",
       "actor_id": "00000000-0000-0000-0000-000000000001",
       "payload": {
-        "name": "🚆 Train Performance Study — Mainline Corridor"
+        "id": "jrn-91b8c250-1219-468d-a902-a64cd8d2a407",
+        "name": "Human Drift R&D",
+        "description": null,
+        "owner_id": "00000000-0000-0000-0000-000000000001",
+        "visibility": "PRIVATE",
+        "status": "ACTIVE",
+        "created_at": "2026-09-14T22:45:34.345Z",
+        "completed_at": null
       },
       "previous_value": null,
-      "occurred_at": "2026-09-14T08:00:00.000Z"
+      "occurred_at": "2026-09-14T22:45:34.345Z"
     },
     {
-      "id": "evt-d24c4e08-8ed4-4b78-9452-bbc4ca58ca65",
-      "entity_type": "Journey",
-      "entity_id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-      "event_type": "JOURNEY_CREATED",
+      "id": "evt-39396109-52d2-4878-a0c5-0d5c8feeb09a",
+      "entity_type": "Node",
+      "entity_id": "nod-157c9874-11d5-4563-b309-d09868385796",
+      "event_type": "NODE_CREATED",
       "actor_id": "00000000-0000-0000-0000-000000000001",
       "payload": {
-        "id": "jrn-df2a6498-333b-47e0-890d-a0446a35e192",
-        "name": "🔬 User Journey 002 — R&D Work Logger"
+        "id": "nod-157c9874-11d5-4563-b309-d09868385796",
+        "journey_id": "jrn-91b8c250-1219-468d-a902-a64cd8d2a407",
+        "parent_id": null,
+        "node_type": "PROJECT",
+        "name": "Research use cases & build a proof of concept",
+        "description": null,
+        "status": "PLANNED",
+        "sequence": null,
+        "estimated_minutes": null,
+        "done_type": null,
+        "due_date": null,
+        "created_at": "2026-09-14T22:45:34.377Z",
+        "completed_at": null,
+        "note": null
       },
       "previous_value": null,
-      "occurred_at": "2026-09-14T10:21:10.838Z"
+      "occurred_at": "2026-09-14T22:45:34.377Z"
     }
-  ]
+  ],
+  "routes": [],
+  "schedules": [],
+  "rest_days": [],
+  "target_program_days": 30
 }
