@@ -11,6 +11,16 @@
       "status": "ACTIVE",
       "created_at": "2026-09-14T22:45:34.345Z",
       "completed_at": null
+    },
+    {
+      "id": "jrn-43aedc02-5248-4b17-9ae0-809a17d871f4",
+      "name": "Personal Life",
+      "description": "Everything in my daily routine",
+      "owner_id": "00000000-0000-0000-0000-000000000001",
+      "visibility": "PRIVATE",
+      "status": "ACTIVE",
+      "created_at": "2026-09-15T11:17:14.426Z",
+      "completed_at": null
     }
   ],
   "nodes": [
@@ -79,6 +89,25 @@
       },
       "previous_value": null,
       "occurred_at": "2026-09-14T22:45:34.377Z"
+    },
+    {
+      "id": "evt-0c1c2e60-311a-4f6c-a528-e3c089f3a3a5",
+      "entity_type": "Journey",
+      "entity_id": "jrn-43aedc02-5248-4b17-9ae0-809a17d871f4",
+      "event_type": "JOURNEY_CREATED",
+      "actor_id": "00000000-0000-0000-0000-000000000001",
+      "payload": {
+        "id": "jrn-43aedc02-5248-4b17-9ae0-809a17d871f4",
+        "name": "Personal Life",
+        "description": "Everything in my daily routine",
+        "owner_id": "00000000-0000-0000-0000-000000000001",
+        "visibility": "PRIVATE",
+        "status": "ACTIVE",
+        "created_at": "2026-09-15T11:17:14.426Z",
+        "completed_at": null
+      },
+      "previous_value": null,
+      "occurred_at": "2026-09-15T11:17:14.430Z"
     }
   ],
   "routes": [],
