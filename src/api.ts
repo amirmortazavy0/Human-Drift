@@ -1,4 +1,5 @@
 import {
+  BoardData,
   ConflictLog,
   Correction,
   DurationVsEstimateResult,
@@ -6,6 +7,9 @@ import {
   Journey,
   JourneyProgressResult,
   Node,
+  ParsedLogProposal,
+  QuickLogPayload,
+  QuickLogResponse,
   Session,
   SessionEntry,
   SessionSummaryResult,
@@ -351,5 +355,43 @@ export async function getHealth(): Promise<{
 }> {
   const res = await fetch('/health');
   if (!res.ok) throw new Error(`Health check failed: ${res.statusText}`);
+  return res.json();
+}
+
+// --- Daily Logger MVP & Board API ---
+
+export async function getBoard(journeyId?: string): Promise<BoardData> {
+  const url = journeyId ? `${API_BASE}/board/${encodeURIComponent(journeyId)}` : `${API_BASE}/board`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch board data: ${res.statusText}`);
+  return res.json();
+}
+
+export async function parseLogWithAI(
+  message: string,
+  journeyId?: string
+): Promise<ParsedLogProposal> {
+  const res = await fetch(`${API_BASE}/ai/parse-log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, journey_id: journeyId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to parse log with AI: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function quickLogSession(payload: QuickLogPayload): Promise<QuickLogResponse> {
+  const res = await fetch(`${API_BASE}/sessions/quick-log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to log session: ${res.statusText}`);
+  }
   return res.json();
 }

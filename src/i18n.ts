@@ -13,6 +13,8 @@ export const strings = {
     noJourneySelected: 'No journey selected',
 
     // Nav tabs
+    board: 'Board',
+    fastLog: 'Quick Log',
     guide: 'Guide',
     tree: 'Plan',
     session: 'Session',
@@ -74,6 +76,8 @@ export const strings = {
     noJourneySelected: 'سفری انتخاب نشده',
 
     // Nav tabs
+    board: 'بُرد',
+    fastLog: 'ثبت سریع',
     guide: 'راهنما',
     tree: 'برنامه',
     session: 'جلسه',

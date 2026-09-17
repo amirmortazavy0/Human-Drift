@@ -5,7 +5,7 @@ An R&D prototype investigating plan-execution drift by preserving intention, log
 ## Architecture
 - **Server**: Node.js & Express (`server.ts`), serving REST APIs and Vite single-page application on port 3000.
 - **Client**: React 18 with TypeScript and Tailwind CSS.
-- **Persistence**: Single JSON file storage with atomic temp-file writes, automated rolling backups, and append-only event log audit trail at `backend/data/human_drift.json`.
+- **Persistence**: Single JSON file storage with atomic temp-file writes, automated rolling backups, and append-only event log audit trail at `data/human_drift.json`.
 
 ## Quick Start
 

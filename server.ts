@@ -1,3 +1,8 @@
+// Clean up tsx relative __dirname shim so ESM plugins like vite-plugin-pwa can resolve properly
+if (typeof (globalThis as any).__dirname !== 'undefined' && (globalThis as any).__dirname === '.') {
+  delete (globalThis as any).__dirname;
+}
+
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -15,6 +20,15 @@ import {
   calculateJourneyProgress,
   calculateSessionSummary,
 } from './server/queries';
+import { parseNaturalLanguageLog } from './server/aiLogger';
+import { computeBoardData } from './server/boardService';
+import {
+  syncEventToSupabase,
+  syncJourneyToSupabase,
+  syncNodeToSupabase,
+  syncSessionEntryToSupabase,
+  syncSessionToSupabase,
+} from './server/supabase';
 import {
   ConflictLog,
   Correction,
@@ -1123,6 +1137,233 @@ async function startServer() {
   });
 
   // ==========================================
+  // DAILY LOGGER MVP & BOARD ENDPOINTS
+  // ==========================================
+
+  app.get(['/api/board', '/api/board/:journey_id'], (req: Request, res: Response) => {
+    const data = readAppData();
+    const journeyId = req.params.journey_id;
+    const board = computeBoardData(data, journeyId);
+    res.json(board);
+  });
+
+  // AI natural language work logger parser
+  app.post('/api/ai/parse-log', async (req: Request, res: Response) => {
+    const { message, journey_id } = req.body;
+    if (!message || !String(message).trim()) {
+      res.status(400).json({ detail: 'Log message is required' });
+      return;
+    }
+
+    const data = readAppData();
+    try {
+      const proposal = await parseNaturalLanguageLog(
+        String(message).trim(),
+        data.journeys,
+        data.nodes,
+        journey_id
+      );
+      res.json(proposal);
+    } catch (err: any) {
+      console.error('[AI Parse] Error parsing log:', err);
+      res.status(500).json({ detail: err.message || 'Failed to parse log' });
+    }
+  });
+
+  // One-tap quick log commit
+  app.post('/api/sessions/quick-log', (req: Request, res: Response) => {
+    const data = readAppData();
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    const {
+      journey_id,
+      node_id,
+      node_name,
+      node_status = 'ACTIVE',
+      work_type = 'DEVELOPMENT',
+      duration_minutes = 60,
+      intention,
+      condition,
+    } = req.body;
+
+    if (!intention || !String(intention).trim()) {
+      res.status(400).json({ detail: 'Session intention is required' });
+      return;
+    }
+
+    // 1. Locate or select journey
+    let journey = data.journeys.find((j) => j.id === journey_id);
+    if (!journey) {
+      journey = data.journeys.find((j) => j.status === 'ACTIVE') || data.journeys[0];
+    }
+    if (!journey) {
+      journey = {
+        id: `jrn-${randomUUID()}`,
+        name: 'Daily Execution',
+        owner_id: DEFAULT_USER_ID,
+        visibility: 'PRIVATE',
+        status: 'ACTIVE',
+        created_at: nowIso,
+        completed_at: null,
+      };
+      data.journeys.push(journey);
+      appendEvent(data, {
+        entity_type: 'Journey',
+        entity_id: journey.id,
+        event_type: 'JOURNEY_CREATED',
+        payload: journey,
+      });
+      syncJourneyToSupabase(journey);
+    }
+
+    // 2. Locate or create Node
+    let node: Node | undefined;
+    if (node_id) {
+      node = data.nodes.find((n) => n.id === node_id);
+    }
+
+    if (!node && node_name) {
+      const cleanName = String(node_name).trim();
+      node = data.nodes.find(
+        (n) => n.journey_id === journey!.id && n.name.toLowerCase() === cleanName.toLowerCase()
+      );
+
+      if (!node) {
+        node = {
+          id: `nod-${randomUUID()}`,
+          journey_id: journey.id,
+          name: cleanName,
+          node_type: 'TASK',
+          status: node_status === 'COMPLETE' ? 'COMPLETE' : 'ACTIVE',
+          created_at: nowIso,
+          completed_at: node_status === 'COMPLETE' ? nowIso : null,
+        };
+        data.nodes.push(node);
+        appendEvent(data, {
+          entity_type: 'Node',
+          entity_id: node.id,
+          event_type: 'NODE_CREATED',
+          payload: node,
+        });
+        syncNodeToSupabase(node);
+      }
+    }
+
+    // If node exists and node_status is specified to COMPLETE
+    if (node && node_status === 'COMPLETE' && node.status !== 'COMPLETE') {
+      const prevStatus = node.status;
+      node.status = 'COMPLETE';
+      node.completed_at = nowIso;
+      appendEvent(data, {
+        entity_type: 'Node',
+        entity_id: node.id,
+        event_type: 'NODE_STATUS_CHANGED',
+        payload: { node_id: node.id, previous_status: prevStatus, new_status: 'COMPLETE' },
+      });
+      syncNodeToSupabase(node);
+    } else if (node && node_status === 'ACTIVE' && node.status === 'PLANNED') {
+      node.status = 'ACTIVE';
+      appendEvent(data, {
+        entity_type: 'Node',
+        entity_id: node.id,
+        event_type: 'NODE_STATUS_CHANGED',
+        payload: { node_id: node.id, previous_status: 'PLANNED', new_status: 'ACTIVE' },
+      });
+      syncNodeToSupabase(node);
+    }
+
+    // 3. Compute timestamps: started_at = now - duration_minutes
+    const durMins = Math.max(1, Number(duration_minutes) || 60);
+    const startTime = new Date(now.getTime() - durMins * 60 * 1000);
+    const startIso = startTime.toISOString();
+
+    // 4. Create Session (Intention is locked and immutable)
+    const session: Session = {
+      id: `ses-${randomUUID()}`,
+      journey_id: journey.id,
+      label: `${work_type} Session`,
+      intention: String(intention).trim(),
+      started_at: startIso,
+      ended_at: nowIso,
+      status: 'COMPLETE',
+      end_reason: 'NATURAL_COMPLETION',
+      predecessor_session_id: null,
+      successor_session_id: null,
+      reflection: null,
+      quality: 'GOOD',
+      note: `Quick logged via Daily Voice/Chat: ${intention}`,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    data.sessions.push(session);
+
+    appendEvent(data, {
+      entity_type: 'Session',
+      entity_id: session.id,
+      event_type: 'SESSION_STARTED',
+      payload: session,
+    });
+    appendEvent(data, {
+      entity_type: 'Session',
+      entity_id: session.id,
+      event_type: 'SESSION_INTENTION_LOCKED',
+      payload: { session_id: session.id, intention: session.intention },
+    });
+
+    // 5. Create Session Entry
+    const sessionEntry: SessionEntry = {
+      id: `ent-${randomUUID()}`,
+      session_id: session.id,
+      node_id: node ? node.id : null,
+      entry_type: node_status === 'COMPLETE' ? 'TASK_COMPLETED' : 'TASK_STARTED',
+      logged_at: nowIso,
+      note: `${session.intention} (${durMins} min)`,
+      condition: condition || {
+        energy: 'MEDIUM',
+        focus: 'NORMAL',
+        location: 'HOME',
+        environment: 'QUIET',
+      },
+    };
+    data.entries.push(sessionEntry);
+
+    appendEvent(data, {
+      entity_type: 'SessionEntry',
+      entity_id: sessionEntry.id,
+      event_type: 'ENTRY_LOGGED',
+      payload: sessionEntry,
+    });
+
+    appendEvent(data, {
+      entity_type: 'Session',
+      entity_id: session.id,
+      event_type: 'SESSION_COMPLETED',
+      payload: {
+        session_id: session.id,
+        end_reason: 'NATURAL_COMPLETION',
+        duration_minutes: durMins,
+      },
+    });
+
+    writeAppData(data);
+
+    // Sync to Supabase in background
+    syncSessionToSupabase(session);
+    syncSessionEntryToSupabase(sessionEntry);
+
+    const board = computeBoardData(data, journey.id);
+
+    res.status(201).json({
+      success: true,
+      session,
+      node,
+      entry: sessionEntry,
+      board,
+    });
+  });
+
+  // ==========================================
   // EVENT LOG & EXPORT
   // ==========================================
 
@@ -1156,7 +1397,10 @@ async function startServer() {
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

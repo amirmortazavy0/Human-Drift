@@ -12,7 +12,7 @@ import {
   SessionEntry,
 } from '../src/types';
 
-const DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
+const DATA_DIR = path.resolve(process.cwd(), 'data');
 const STORAGE_FILE = path.join(DATA_DIR, 'human_drift.json');
 const BACKUP_FILE = path.join(DATA_DIR, 'human_drift.json.bak');
 

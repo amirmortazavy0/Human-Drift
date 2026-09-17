@@ -221,6 +221,8 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
   const currentIndex = steps.findIndex(s => s.id === step);
 
   const navLabels: Record<NavTab, string> = {
+    BOARD:     lang === 'fa' ? 'بُرد' : 'Board',
+    FAST_LOG:  lang === 'fa' ? 'ثبت سریع' : 'Quick Log',
     GUIDE:     lang === 'fa' ? 'راهنما' : 'Guide',
     HIERARCHY: lang === 'fa' ? 'برنامه' : 'Plan',
     SESSION:   lang === 'fa' ? 'جلسه'  : 'Session',

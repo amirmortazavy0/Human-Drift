@@ -182,7 +182,76 @@ export interface JourneyProgressResult {
 }
 
 // Complete App Data Store
-export type NavTab = 'HIERARCHY' | 'SESSION' | 'HISTORY' | 'QUERIES' | 'AUDIT' | 'GUIDE';
+export type NavTab =
+  | 'BOARD'
+  | 'FAST_LOG'
+  | 'HIERARCHY'
+  | 'SESSION'
+  | 'HISTORY'
+  | 'QUERIES'
+  | 'AUDIT'
+  | 'GUIDE';
+
+export interface BoardNodeItem {
+  id: string;
+  journey_id: string;
+  parent_id?: string | null;
+  name: string;
+  description?: string | null;
+  status: NodeStatus;
+  node_type: NodeType;
+  total_logged_minutes: number;
+  session_count: number;
+  last_activity_at: string | null;
+  recent_sessions: Array<{
+    id: string;
+    intention: string;
+    duration_minutes: number;
+    logged_at: string;
+  }>;
+}
+
+export interface BoardData {
+  columns: {
+    planned: BoardNodeItem[];
+    in_progress: BoardNodeItem[];
+    done: BoardNodeItem[];
+    paused: BoardNodeItem[];
+  };
+  total_nodes: number;
+  total_active_minutes: number;
+}
+
+export interface ParsedLogProposal {
+  journey_id: string;
+  node_id: string | null;
+  node_name: string;
+  node_status: 'ACTIVE' | 'COMPLETE' | 'PLANNED' | 'PAUSED';
+  work_type: 'DEVELOPMENT' | 'RESEARCH' | 'DESIGN' | 'WRITING' | 'ADMIN';
+  duration_minutes: number;
+  intention: string;
+  reasoning: string;
+  provider: 'openrouter' | 'gemini' | 'local_heuristic';
+}
+
+export interface QuickLogPayload {
+  journey_id: string;
+  node_id?: string | null;
+  node_name: string;
+  node_status: 'ACTIVE' | 'COMPLETE' | 'PLANNED' | 'PAUSED';
+  work_type: string;
+  duration_minutes: number;
+  intention: string;
+  condition?: Partial<Condition>;
+}
+
+export interface QuickLogResponse {
+  success: boolean;
+  session: Session;
+  node?: Node;
+  entry: SessionEntry;
+  board: BoardData;
+}
 
 export interface AppData {
   version: string;
