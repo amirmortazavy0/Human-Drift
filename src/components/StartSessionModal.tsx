@@ -1,101 +1,97 @@
 import React, { useState } from 'react';
-import { Lock, Play, X, Zap, Target, MapPin, Volume2 } from 'lucide-react';
-import { Condition, EnergyLevel, EnvironmentType, FocusLevel, Journey, LocationType, Node } from '../types';
-import { createSession } from '../api';
+import { Condition, Journey, Node, Session } from '../types';
+import { startSession } from '../api';
+import { Play, BatteryCharging, Brain, MapPin, Volume2, X, Lock } from 'lucide-react';
 
 interface StartSessionModalProps {
-  journeys: Journey[];
-  selectedJourneyId: string;
+  isOpen: boolean;
   onClose: () => void;
-  onSessionStarted: (sessionId: string) => Promise<void>;
-  preselectedNode?: Node | null;
+  targetNode?: Node | null;
+  targetJourney?: Journey | null;
+  journeys?: Journey[];
+  nodes?: Node[];
+  currentCondition: Condition;
+  onSessionStarted: (session: Session) => void;
 }
 
 export const StartSessionModal: React.FC<StartSessionModalProps> = ({
-  journeys,
-  selectedJourneyId,
+  isOpen,
   onClose,
+  targetNode,
+  targetJourney,
+  journeys = [],
+  nodes = [],
+  currentCondition,
   onSessionStarted,
-  preselectedNode,
 }) => {
-  const [journeyId, setJourneyId] = useState(selectedJourneyId);
-  const [intention, setIntention] = useState(
-    preselectedNode ? `Work on ${preselectedNode.name}` : ''
+  const [journeyId, setJourneyId] = useState<string>(
+    targetJourney?.id || targetNode?.journey_id || journeys[0]?.id || ''
   );
-  const [label, setLabel] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [nodeId, setNodeId] = useState<string>(targetNode?.id || '');
+  const [intention, setIntention] = useState<string>(
+    targetNode ? `Work on ${targetNode.name}` : ''
+  );
+  const [condition, setCondition] = useState<Condition>(currentCondition);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initial Condition
-  const [energy, setEnergy] = useState<EnergyLevel>('MEDIUM');
-  const [focus, setFocus] = useState<FocusLevel>('NORMAL');
-  const [location, setLocation] = useState<LocationType>('HOME');
-  const [environment, setEnvironment] = useState<EnvironmentType>('QUIET');
+  if (!isOpen) return null;
+
+  const journeyNodes = (nodes || []).filter((n) => n.journey_id === journeyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!intention.trim()) {
-      setError('Initial intention cannot be blank. State what you plan to accomplish.');
-      return;
-    }
+    if (!intention.trim() || !journeyId) return;
 
-    setLoading(true);
-    setError(null);
+    setIsSubmitting(true);
     try {
-      const res = await createSession({
+      const created = await startSession({
         journey_id: journeyId,
+        node_id: nodeId || null,
         intention: intention.trim(),
-        label: label.trim() || undefined,
-        initial_node_id: preselectedNode?.id,
-        condition: { energy, focus, location, environment },
+        label: targetNode ? targetNode.name : 'Focus Session',
+        condition,
       });
 
-      // Pass along starting session
-      await onSessionStarted(res.session.id);
+      onSessionStarted(created);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to start session');
-      setLoading(false);
+      alert(`Failed to start session: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
-      <div className="w-full max-w-lg bg-white border border-stone-200 rounded-xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
-          <div className="flex items-center gap-2 text-stone-900 font-semibold">
-            <Lock className="w-4 h-4 text-stone-700" />
-            <span>Start Session & Lock Intention</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-6 relative space-y-4">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <Play className="w-5 h-5 fill-current" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-200/50"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div>
+            <h3 className="font-bold text-zinc-100 text-base">Start Intended Session</h3>
+            <p className="text-xs text-zinc-400">Lock your intention before reality unfolds</p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-3 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 leading-relaxed">
-            <strong className="font-semibold text-stone-900">Rule 2 (Intention Locking):</strong> Your declared
-            intention is recorded once and <em>never</em> overwritten. If your direction shifts mid-session,
-            it is recorded as an intentional revision so drift can be understood.
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-              {error}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          {/* Target Journey */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1">
-              Journey
-            </label>
+            <label className="block text-zinc-400 mb-1 font-medium">Journey</label>
             <select
               value={journeyId}
-              onChange={(e) => setJourneyId(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-stone-400"
+              onChange={(e) => {
+                setJourneyId(e.target.value);
+                setNodeId('');
+              }}
+              className="w-full bg-zinc-950 border border-zinc-700 text-zinc-200 rounded-lg p-2 focus:outline-none"
             >
               {journeys.map((j) => (
                 <option key={j.id} value={j.id}>
@@ -105,117 +101,125 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </select>
           </div>
 
+          {/* Target Node */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1">
-              Declared Intention <span className="text-red-500">*</span>
+            <label className="block text-zinc-400 mb-1 font-medium">Target Node (optional)</label>
+            <select
+              value={nodeId}
+              onChange={(e) => {
+                setNodeId(e.target.value);
+                const n = nodes.find((node) => node.id === e.target.value);
+                if (n && !intention) {
+                  setIntention(`Work on ${n.name}`);
+                }
+              }}
+              className="w-full bg-zinc-950 border border-zinc-700 text-zinc-200 rounded-lg p-2 focus:outline-none"
+            >
+              <option value="">(No specific node / General session)</option>
+              {journeyNodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name} ({n.status})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Intention Input */}
+          <div className="space-y-1">
+            <label className="block text-zinc-300 font-semibold flex items-center gap-1.5">
+              <Lock className="w-3 h-3 text-cyan-400" />
+              <span>Intention Statement (Immutable Rule 1)</span>
             </label>
             <textarea
               value={intention}
               onChange={(e) => setIntention(e.target.value)}
-              rows={3}
-              placeholder="e.g. Work on Domain Model v1 for 90 minutes. Test edge cases."
-              className="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-stone-400 font-serif text-base"
+              placeholder="What specifically do you intend to accomplish in this session?"
+              rows={2}
               required
+              className="w-full bg-zinc-950 border border-cyan-700/50 rounded-lg p-2.5 text-zinc-100 focus:outline-none focus:border-cyan-500 resize-none font-medium"
             />
+            <p className="text-[11px] text-zinc-500">
+              Session intention is locked at start and will never be modified.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1">
-              Session Label (Optional)
-            </label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Morning deep work sprint"
-              className="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-lg text-stone-900"
-            />
-          </div>
-
-          <div className="border-t border-stone-100 pt-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2.5">
-              Initial Circumstances (Sticky Condition)
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {/* Initial Condition */}
+          <div className="space-y-2 pt-1 border-t border-zinc-800">
+            <label className="block text-zinc-400 font-medium">Initial Condition State</label>
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-2xs text-stone-500 mb-1 flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-500" /> Energy
-                </label>
+                <span className="text-[10px] text-zinc-500">Energy</span>
                 <select
-                  value={energy}
-                  onChange={(e) => setEnergy(e.target.value as EnergyLevel)}
-                  className="w-full px-2 py-1.5 text-xs bg-stone-50 border border-stone-300 rounded-md text-stone-900"
+                  value={condition.energy}
+                  onChange={(e) => setCondition({ ...condition, energy: e.target.value as any })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-300 rounded p-1.5"
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-2xs text-stone-500 mb-1 flex items-center gap-1">
-                  <Target className="w-3 h-3 text-sky-500" /> Focus
-                </label>
+                <span className="text-[10px] text-zinc-500">Focus</span>
                 <select
-                  value={focus}
-                  onChange={(e) => setFocus(e.target.value as FocusLevel)}
-                  className="w-full px-2 py-1.5 text-xs bg-stone-50 border border-stone-300 rounded-md text-stone-900"
+                  value={condition.focus}
+                  onChange={(e) => setCondition({ ...condition, focus: e.target.value as any })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-300 rounded p-1.5"
                 >
-                  <option value="SCATTERED">Scattered</option>
-                  <option value="NORMAL">Normal</option>
-                  <option value="DEEP">Deep</option>
+                  <option value="SCATTERED">SCATTERED</option>
+                  <option value="NORMAL">NORMAL</option>
+                  <option value="DEEP">DEEP</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-2xs text-stone-500 mb-1 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-rose-500" /> Location
-                </label>
+                <span className="text-[10px] text-zinc-500">Location</span>
                 <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value as LocationType)}
-                  className="w-full px-2 py-1.5 text-xs bg-stone-50 border border-stone-300 rounded-md text-stone-900"
+                  value={condition.location}
+                  onChange={(e) => setCondition({ ...condition, location: e.target.value as any })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-300 rounded p-1.5"
                 >
-                  <option value="HOME">Home</option>
-                  <option value="CAFE">Cafe</option>
-                  <option value="OFFICE">Office</option>
-                  <option value="TRANSIT">Transit</option>
-                  <option value="OTHER">Other</option>
+                  <option value="HOME">HOME</option>
+                  <option value="CAFE">CAFE</option>
+                  <option value="OFFICE">OFFICE</option>
+                  <option value="TRANSIT">TRANSIT</option>
+                  <option value="OTHER">OTHER</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-2xs text-stone-500 mb-1 flex items-center gap-1">
-                  <Volume2 className="w-3 h-3 text-emerald-500" /> Environment
-                </label>
+                <span className="text-[10px] text-zinc-500">Environment</span>
                 <select
-                  value={environment}
-                  onChange={(e) => setEnvironment(e.target.value as EnvironmentType)}
-                  className="w-full px-2 py-1.5 text-xs bg-stone-50 border border-stone-300 rounded-md text-stone-900"
+                  value={condition.environment}
+                  onChange={(e) =>
+                    setCondition({ ...condition, environment: e.target.value as any })
+                  }
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-300 rounded p-1.5"
                 >
-                  <option value="QUIET">Quiet</option>
-                  <option value="AMBIENT">Ambient</option>
-                  <option value="NOISY">Noisy</option>
+                  <option value="QUIET">QUIET</option>
+                  <option value="AMBIENT">AMBIENT</option>
+                  <option value="NOISY">NOISY</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-stone-600 hover:text-stone-900"
+              className="px-3 py-1.5 text-zinc-400 hover:text-zinc-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 shadow-xs cursor-pointer"
+              disabled={isSubmitting || !intention.trim()}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-lg flex items-center gap-1.5 shadow disabled:opacity-40"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>{loading ? 'Locking...' : 'Lock Intention & Start Session'}</span>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Lock Intention & Start</span>
             </button>
           </div>
         </form>

@@ -1,703 +1,470 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Play,
+  Sparkles,
+  HelpCircle,
   FolderTree,
-  History,
-  BarChart3,
-  ShieldCheck,
-  Plus,
   Compass,
-  BookOpen,
-  Globe,
+  Download,
+  Cpu,
+  Play,
+  Settings,
+  AlertCircle,
   LayoutDashboard,
-  Mic,
-  MoreHorizontal,
+  History,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
-import { Journey, Node, NodeType, Session, NavTab, BoardData } from './types';
-import { createJourney, createNode, getJourneys, getNodes, getSessions, getBoard } from './api';
-import { Lang, t, isRTL } from './i18n';
-import { FirstRunModal } from './components/FirstRunModal';
-import { JourneyNodeTree } from './components/JourneyNodeTree';
+import {
+  Condition,
+  Journey,
+  NavTab,
+  Node,
+  OllamaStatus,
+  Session,
+  SessionEntry,
+} from './types';
+import {
+  getJourneys,
+  getNodes,
+  getSessions,
+  getAllEntries,
+  getOllamaStatus,
+  triggerMarkdownExport,
+} from './api';
+
+// Core 4 Views per Master Build Prompt
+import { LogChatView } from './components/LogChatView';
+import { QueryChatView } from './components/QueryChatView';
+import { TaskView } from './components/TaskView';
+import { DriftView } from './components/DriftView';
+
+// Supporting Components
+import { StickyConditionBar } from './components/StickyConditionBar';
+import { OllamaSettingsModal } from './components/OllamaSettingsModal';
 import { StartSessionModal } from './components/StartSessionModal';
-import { ActiveSessionLogger } from './components/ActiveSessionLogger';
+import { ActiveSessionModal } from './components/ActiveSessionModal';
 import { SessionHistoryView } from './components/SessionHistoryView';
-import { PriorityQueriesView } from './components/PriorityQueriesView';
-import { EventLogView } from './components/EventLogView';
-import { UserGuideView } from './components/UserGuideView';
-import { JourneySwitcherModal } from './components/JourneySwitcherModal';
 import { BoardView } from './components/BoardView';
-import { QuickLogView } from './components/QuickLogView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
   const [journeys, setJourneys] = useState<Journey[]>([]);
-  const [selectedJourneyId, setSelectedJourneyId] = useState<string>('');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [boardData, setBoardData] = useState<BoardData | null>(null);
+  const [entries, setEntries] = useState<SessionEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<NavTab>('BOARD');
-  const [lang, setLang] = useState<Lang>('en');
+  const [activeTab, setActiveTab] = useState<NavTab>('LOG');
 
-  // Quick log prefill state
-  const [quickLogPrefill, setQuickLogPrefill] = useState<string>('');
+  // Ollama AI layer state
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
+  const [showOllamaModal, setShowOllamaModal] = useState(false);
+
+  // Active Session & Sticky Condition State
+  const [currentCondition, setCurrentCondition] = useState<Condition>({
+    energy: 'MEDIUM',
+    focus: 'NORMAL',
+    location: 'HOME',
+    environment: 'QUIET',
+  });
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [sessionElapsedMinutes, setSessionElapsedMinutes] = useState(0);
 
   // Modals
-  const [showStartSessionModal, setShowStartSessionModal] = useState(false);
-  const [showJourneySwitcherModal, setShowJourneySwitcherModal] = useState(false);
-  const [preselectedNode, setPreselectedNode] = useState<Node | null>(null);
-  const [showCreateJourneyModal, setShowCreateJourneyModal] = useState(false);
-  const [showNewNodeModal, setShowNewNodeModal] = useState(false);
-  const [newJourneyName, setNewJourneyName] = useState('');
-  const [newJourneyDesc, setNewJourneyDesc] = useState('');
-  const [newNodeName, setNewNodeName] = useState('');
-  const [newNodeType, setNewNodeType] = useState<NodeType>('TASK');
+  const [selectedBoardJourney, setSelectedBoardJourney] = useState<Journey | null>(null);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [startModalNode, setStartModalNode] = useState<Node | null>(null);
+  const [startModalJourney, setStartModalJourney] = useState<Journey | null>(null);
+  const [showActiveModal, setShowActiveModal] = useState(false);
 
-  // Mobile "More" dropdown
-  const [showMobileMore, setShowMobileMore] = useState(false);
+  // Export State
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
-  // Apply RTL direction to document when language changes
-  useEffect(() => {
-    document.documentElement.dir = isRTL(lang) ? 'rtl' : 'ltr';
-    document.documentElement.lang = lang;
-  }, [lang]);
-
+  // Load all data
   const loadData = useCallback(async () => {
     try {
-      const [jrns, sess, allNodes, board] = await Promise.all([
-        getJourneys(),
-        getSessions(),
-        getNodes(),
-        getBoard(selectedJourneyId || undefined),
+      const [jrns, sss, nds, ents, aiStatus] = await Promise.all([
+        getJourneys().catch(() => []),
+        getSessions().catch(() => []),
+        getNodes().catch(() => []),
+        getAllEntries().catch(() => []),
+        getOllamaStatus().catch(() => ({
+          status: 'offline' as const,
+          url: 'http://localhost:11434',
+          model: 'phi3:mini',
+          available_models: [],
+          provider: 'manual' as const,
+        })),
       ]);
-      setJourneys(jrns);
-      setSessions(sess);
-      setNodes(allNodes);
-      setBoardData(board);
-      if (!selectedJourneyId && jrns.length > 0) {
-        setSelectedJourneyId(jrns[0].id);
+
+      const safeJourneys = Array.isArray(jrns) ? jrns : [];
+      const safeSessions = Array.isArray(sss) ? sss : [];
+      const safeNodes = Array.isArray(nds) ? nds : [];
+      const safeEntries = Array.isArray(ents) ? ents : [];
+
+      setJourneys(safeJourneys);
+      setSessions(safeSessions);
+      setNodes(safeNodes);
+      setEntries(safeEntries);
+      setOllamaStatus(aiStatus);
+
+      // Check for active session in list
+      const ongoing = safeSessions.find((s) => s.status === 'ACTIVE');
+      if (ongoing) {
+        setActiveSession(ongoing);
+        // Find last entry condition if available
+        const sEntries = safeEntries.filter((e) => e.session_id === ongoing.id);
+        if (sEntries.length > 0 && sEntries[sEntries.length - 1].condition) {
+          setCurrentCondition(sEntries[sEntries.length - 1].condition);
+        }
+      } else {
+        setActiveSession(null);
       }
     } catch (err) {
-      console.error('Failed to load data:', err);
+      console.error('Failed to load application data:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedJourneyId]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleFirstRunComplete = async (
-    journeyName: string,
-    nodeName: string,
-    nodeType: NodeType,
-    description?: string
-  ) => {
-    const journey = await createJourney({ name: journeyName, description });
-    await createNode({ journey_id: journey.id, name: nodeName, node_type: nodeType });
-    setSelectedJourneyId(journey.id);
-    await loadData();
-    setActiveTab('BOARD');
-  };
+  // Session timer tick
+  useEffect(() => {
+    if (!activeSession || !activeSession.started_at) {
+      setSessionElapsedMinutes(0);
+      return;
+    }
 
-  const handleCreateJourney = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newJourneyName.trim()) return;
+    const updateTimer = () => {
+      const startMs = new Date(activeSession.started_at!).getTime();
+      const nowMs = Date.now();
+      const mins = Math.max(0, Math.floor((nowMs - startMs) / 60000));
+      setSessionElapsedMinutes(mins);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 30000);
+    return () => clearInterval(interval);
+  }, [activeSession]);
+
+  // Handle Export Markdown Action
+  const handleExportMarkdown = async () => {
+    setIsExporting(true);
+    setExportNotice(null);
     try {
-      const j = await createJourney({
-        name: newJourneyName.trim(),
-        description: newJourneyDesc.trim() || undefined,
-      });
-      setShowCreateJourneyModal(false);
-      setNewJourneyName('');
-      setNewJourneyDesc('');
-      await loadData();
-      setSelectedJourneyId(j.id);
+      const res = await triggerMarkdownExport();
+      setExportNotice('Export complete! Downloading Obsidian zip archive...');
+      // Trigger browser download
+      window.location.href = res.zip_url || '/api/export/download';
+      setTimeout(() => setExportNotice(null), 5000);
     } catch (err: any) {
-      alert(err.message);
+      setExportNotice(`Export failed: ${err.message}`);
+      setTimeout(() => setExportNotice(null), 5000);
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const handleCreateNewNode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNodeName.trim()) return;
-    const targetJourneyId = selectedJourneyId || journeys[0]?.id;
-    if (!targetJourneyId) return;
-
-    try {
-      await createNode({
-        journey_id: targetJourneyId,
-        name: newNodeName.trim(),
-        node_type: newNodeType,
-      });
-      setShowNewNodeModal(false);
-      setNewNodeName('');
-      await loadData();
-    } catch (err: any) {
-      alert(err.message);
-    }
+  const handleStartSessionPrompt = (node?: Node, journey?: Journey) => {
+    setStartModalNode(node || null);
+    setStartModalJourney(journey || null);
+    setShowStartModal(true);
   };
-
-  const activeSession = sessions.find((s) => s.status === 'ACTIVE');
-  const currentJourney = journeys.find((j) => j.id === selectedJourneyId) || journeys[0];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-stone-950 text-stone-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-mono text-stone-400">{t(lang, 'loading')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (journeys.length === 0) {
-    return <FirstRunModal lang={lang} onComplete={handleFirstRunComplete} />;
-  }
-
-  // Primary desktop & mobile navigation tabs
-  const primaryTabs: { id: NavTab; label: string; icon: React.ReactNode; dot?: boolean }[] = [
-    { id: 'BOARD', label: t(lang, 'board' as any) || 'Board', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'FAST_LOG', label: t(lang, 'fastLog' as any) || 'Quick Log', icon: <Mic className="w-4 h-4 text-amber-400" /> },
-    { id: 'HIERARCHY', label: t(lang, 'tree'), icon: <FolderTree className="w-4 h-4" /> },
-    { id: 'SESSION', label: t(lang, 'session'), icon: <Play className="w-4 h-4" />, dot: !!activeSession },
-    { id: 'HISTORY', label: t(lang, 'history'), icon: <History className="w-4 h-4" /> },
-  ];
-
-  const secondaryTabs: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'QUERIES', label: t(lang, 'queries'), icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'AUDIT', label: t(lang, 'audit'), icon: <ShieldCheck className="w-4 h-4" /> },
-    { id: 'GUIDE', label: t(lang, 'guide'), icon: <BookOpen className="w-4 h-4" /> },
-  ];
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col antialiased selection:bg-amber-500/30 selection:text-amber-200">
-      {/* Header */}
-      <header className="bg-stone-900/90 backdrop-blur-md border-b border-stone-800 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          {/* Brand */}
-          <div
-            onClick={() => setActiveTab('BOARD')}
-            className="flex items-center gap-2.5 shrink-0 cursor-pointer"
-          >
-            <div className="p-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl shadow-xs">
-              <Compass className="w-4 h-4" />
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+      {/* Sticky Condition Bar (Visible When Active Session Exists) */}
+      <StickyConditionBar
+        activeSession={activeSession}
+        currentCondition={currentCondition}
+        onUpdateCondition={(newCond) => setCurrentCondition(newCond)}
+        onEndSession={() => setShowActiveModal(true)}
+        onQuickEntry={() => setShowActiveModal(true)}
+        elapsedMinutes={sessionElapsedMinutes}
+      />
+
+      {/* Main Top Header */}
+      <header className="border-b border-zinc-800 bg-zinc-900/90 backdrop-blur-md sticky top-0 z-30 shadow-md">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          {/* Logo & Core Philosophy */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-950 flex items-center justify-center font-black text-sm tracking-tighter shadow-md">
+              HD
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight text-stone-100 leading-none">
-                {t(lang, 'appName')}
-              </span>
-              <span className="text-[10px] font-mono text-stone-400 leading-none mt-0.5">
-                Daily Logger
-              </span>
-            </div>
-          </div>
-
-          {/* Right controls */}
-          <div className="flex items-center gap-2">
-            {/* PWA Install Button */}
-            <PWAInstallButton />
-
-            {/* Language toggle */}
-            <button
-              onClick={() => setLang((l) => (l === 'en' ? 'fa' : 'en'))}
-              title={t(lang, 'language')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-stone-800 hover:bg-stone-800 text-xs font-mono text-stone-400 hover:text-stone-200 transition-colors cursor-pointer"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>{lang === 'en' ? 'FA' : 'EN'}</span>
-            </button>
-
-            {/* Journey switcher */}
-            <button
-              onClick={() => setShowJourneySwitcherModal(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-800 hover:bg-stone-800 text-xs font-medium text-stone-300 transition-colors cursor-pointer max-w-[200px]"
-            >
-              <span className="truncate">{currentJourney?.name ?? t(lang, 'noJourneySelected')}</span>
-            </button>
-
-            {/* New journey */}
-            <button
-              onClick={() => setShowCreateJourneyModal(true)}
-              title={t(lang, 'newJourney')}
-              className="p-1.5 rounded-xl border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-stone-200 transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-
-            {/* Active Session Indicator / Button */}
-            {activeSession ? (
-              <button
-                onClick={() => setActiveTab('SESSION')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/90 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                <span className="hidden sm:inline">{t(lang, 'activeSession')}</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setPreselectedNode(null);
-                  setShowStartSessionModal(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold border border-stone-700 transition-colors cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
-                <span className="hidden sm:inline">{t(lang, 'startSession')}</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Desktop Tab Navigation Bar */}
-        <div className="hidden sm:flex max-w-6xl mx-auto px-4 gap-1 border-t border-stone-800/80 overflow-x-auto">
-          {primaryTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all cursor-pointer border-b-2 ${
-                activeTab === tab.id
-                  ? 'border-amber-500 text-amber-400 font-semibold'
-                  : 'border-transparent text-stone-400 hover:text-stone-200'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-              {tab.dot && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-2 right-1.5 animate-pulse" />
-              )}
-            </button>
-          ))}
-
-          <div className="w-px h-5 bg-stone-800 self-center mx-1" />
-
-          {secondaryTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-1.5 px-2.5 py-2.5 text-xs font-medium transition-all cursor-pointer border-b-2 ${
-                activeTab === tab.id
-                  ? 'border-amber-500 text-amber-400 font-semibold'
-                  : 'border-transparent text-stone-500 hover:text-stone-300'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </header>
-
-      {/* Main Content Body */}
-      <main className="max-w-6xl w-full mx-auto px-3.5 sm:px-4 py-4 sm:py-5 flex-1 pb-24 sm:pb-8">
-        {/* 1. DAILY BOARD VIEW */}
-        {activeTab === 'BOARD' && (
-          <BoardView
-            boardData={boardData}
-            journeys={journeys}
-            selectedJourney={currentJourney}
-            onSelectJourney={(j) => {
-              setSelectedJourneyId(j ? j.id : '');
-            }}
-            onRefresh={loadData}
-            onQuickLogForNode={(nodeName) => {
-              setQuickLogPrefill(`Worked on ${nodeName}`);
-              setActiveTab('FAST_LOG');
-            }}
-            onOpenNewNodeModal={() => setShowNewNodeModal(true)}
-          />
-        )}
-
-        {/* 2. FAST NATURAL LANGUAGE / VOICE LOGGER */}
-        {activeTab === 'FAST_LOG' && (
-          <QuickLogView
-            journeys={journeys}
-            nodes={nodes}
-            currentJourney={currentJourney}
-            onLogCommitted={loadData}
-            prefilledPrompt={quickLogPrefill}
-            onClearPrefill={() => setQuickLogPrefill('')}
-          />
-        )}
-
-        {/* 3. TREE HIERARCHY */}
-        {activeTab === 'HIERARCHY' && currentJourney && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-stone-900 border border-stone-800 p-4 rounded-2xl">
-              <div>
-                <h2 className="text-base font-bold text-stone-100">{currentJourney.name}</h2>
-                {currentJourney.description && (
-                  <p className="text-xs text-stone-400 mt-0.5">{currentJourney.description}</p>
-                )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-base tracking-tight text-zinc-100">Human Drift</h1>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 border border-zinc-700 font-mono text-zinc-400">
+                  v1.0
+                </span>
               </div>
+              <p className="text-[11px] text-zinc-400 hidden sm:block">
+                Intention is immutable. Reality is logged. The gap is drift.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Action Tools */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* AI Status Badge */}
+            <button
+              onClick={() => setShowOllamaModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border transition-all cursor-pointer bg-zinc-950 border-zinc-800 hover:border-zinc-700"
+              title="Click to configure Ollama AI"
+            >
+              {ollamaStatus?.status === 'online' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-zinc-200 font-mono text-[11px]">
+                    Ollama [{ollamaStatus.model}]
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span className="text-zinc-400 text-[11px]">AI offline — manual mode</span>
+                </>
+              )}
+              <Settings className="w-3 h-3 text-zinc-500" />
+            </button>
+
+            {/* Markdown Export Button */}
+            <button
+              onClick={handleExportMarkdown}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs rounded-lg font-medium transition-all disabled:opacity-50"
+              title="Run export.py and download Obsidian-ready Markdown archive"
+            >
+              {isExporting ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span className="hidden sm:inline">Export .md</span>
+            </button>
+
+            {/* Start Session Button */}
+            {!activeSession && (
               <button
-                onClick={() => {
-                  setPreselectedNode(null);
-                  setShowStartSessionModal(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                onClick={() => handleStartSessionPrompt()}
+                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold rounded-lg transition-all shadow-md"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{t(lang, 'startSession')}</span>
+                <span>Start Session</span>
               </button>
-            </div>
+            )}
 
-            <JourneyNodeTree
-              journey={currentJourney}
-              nodes={nodes.filter((n) => n.journey_id === currentJourney.id)}
-              onRefresh={loadData}
-              onStartSessionWithNode={(node) => {
-                setPreselectedNode(node);
-                setShowStartSessionModal(true);
-              }}
-            />
+            <PWAInstallButton />
+            <OfflineIndicator />
           </div>
-        )}
+        </div>
 
-        {/* 4. ACTIVE SESSION LOGGER */}
-        {activeTab === 'SESSION' && (
-          activeSession ? (
-            <ActiveSessionLogger
-              session={activeSession}
-              journey={journeys.find((j) => j.id === activeSession.journey_id) || currentJourney}
-              nodes={nodes.filter(
-                (n) => n.journey_id === (activeSession?.journey_id ?? currentJourney?.id)
-              )}
-              journeys={journeys}
-              onSessionEnded={async () => {
-                await loadData();
-                setActiveTab('BOARD');
-              }}
-              onSessionSwitched={async (_newSession, targetJourney) => {
-                setSelectedJourneyId(targetJourney.id);
-                await loadData();
-                setActiveTab('SESSION');
-              }}
-              onRefreshNodes={loadData}
-            />
-          ) : (
-            <div className="max-w-sm mx-auto mt-16 text-center space-y-4 p-6 bg-stone-900 border border-stone-800 rounded-3xl">
-              <div className="w-12 h-12 bg-stone-800 rounded-2xl flex items-center justify-center mx-auto text-stone-400">
-                <Play className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-stone-100">{t(lang, 'noActiveSession')}</p>
-                <p className="text-xs text-stone-400 mt-1">{t(lang, 'noActiveSessionHint')}</p>
-              </div>
-              <div className="flex flex-col gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    setPreselectedNode(null);
-                    setShowStartSessionModal(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{t(lang, 'lockAndStart')}</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('FAST_LOG')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  <Mic className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Use 1-Tap Quick Voice Log</span>
-                </button>
-              </div>
-            </div>
-          )
-        )}
+        {/* 4 Core Views Navigation Bar */}
+        <nav aria-label="Main Navigation" className="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto border-t border-zinc-800/80 scrollbar-none">
+          <button
+            onClick={() => setActiveTab('LOG')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'LOG'
+                ? 'border-emerald-400 text-emerald-300 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>1. Log Chat</span>
+          </button>
 
-        {/* 5. HISTORY */}
-        {activeTab === 'HISTORY' && (
-          <SessionHistoryView
-            sessions={sessions}
-            journeys={journeys}
-            nodes={nodes}
-            onRefresh={loadData}
-          />
-        )}
+          <button
+            onClick={() => setActiveTab('QUERY')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'QUERY'
+                ? 'border-purple-400 text-purple-300 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-purple-400" />
+            <span>2. Query Chat</span>
+          </button>
 
-        {/* 6. QUERIES */}
-        {activeTab === 'QUERIES' && (
-          <PriorityQueriesView journeys={journeys} selectedJourneyId={selectedJourneyId} />
-        )}
+          <button
+            onClick={() => setActiveTab('TASKS')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'TASKS'
+                ? 'border-cyan-400 text-cyan-300 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <FolderTree className="w-3.5 h-3.5 text-cyan-400" />
+            <span>3. Task View</span>
+          </button>
 
-        {/* 7. AUDIT */}
-        {activeTab === 'AUDIT' && <EventLogView />}
+          <button
+            onClick={() => setActiveTab('DRIFT')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'DRIFT'
+                ? 'border-amber-400 text-amber-300 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <span>4. Drift View</span>
+          </button>
 
-        {/* 8. GUIDE */}
-        {activeTab === 'GUIDE' && (
-          <UserGuideView
-            lang={lang}
-            onNavigateTab={setActiveTab}
-            onOpenStartSession={() => setShowStartSessionModal(true)}
-          />
+          <div className="w-px h-4 bg-zinc-800 mx-1 flex-shrink-0" />
+
+          {/* Secondary tabs */}
+          <button
+            onClick={() => setActiveTab('BOARD')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'BOARD'
+                ? 'border-zinc-200 text-zinc-100 font-semibold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>Board</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('HISTORY')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'HISTORY'
+                ? 'border-zinc-200 text-zinc-100 font-semibold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Audit Trail</span>
+          </button>
+        </nav>
+      </header>
+
+      {/* Export Notification Toast */}
+      {exportNotice && (
+        <div className="bg-emerald-950 border-b border-emerald-800 text-emerald-300 text-xs px-4 py-2 text-center font-medium flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{exportNotice}</span>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <main className="max-w-6xl w-full mx-auto px-4 py-6 flex-1">
+        {loading ? (
+          <div className="p-16 text-center text-zinc-500 text-sm">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-zinc-400" />
+            <span>Loading Human Drift system...</span>
+          </div>
+        ) : (
+          <>
+            {/* VIEW 1: LOG CHAT */}
+            {activeTab === 'LOG' && (
+              <LogChatView
+                journeys={journeys}
+                nodes={nodes}
+                ollamaStatus={ollamaStatus}
+                onOpenSettings={() => setShowOllamaModal(true)}
+                onSessionLogged={loadData}
+                onNavigateToTasks={() => setActiveTab('TASKS')}
+              />
+            )}
+
+            {/* VIEW 2: QUERY CHAT */}
+            {activeTab === 'QUERY' && (
+              <QueryChatView
+                ollamaStatus={ollamaStatus}
+                onOpenSettings={() => setShowOllamaModal(true)}
+              />
+            )}
+
+            {/* VIEW 3: TASK VIEW */}
+            {activeTab === 'TASKS' && (
+              <TaskView
+                journeys={journeys}
+                nodes={nodes}
+                sessions={sessions}
+                entries={entries}
+                onRefreshData={loadData}
+                onStartSession={(node, journey) => handleStartSessionPrompt(node, journey)}
+              />
+            )}
+
+            {/* VIEW 4: DRIFT VIEW */}
+            {activeTab === 'DRIFT' && (
+              <DriftView
+                journeys={journeys}
+                nodes={nodes}
+                sessions={sessions}
+                entries={entries}
+              />
+            )}
+
+            {/* SECONDARY: BOARD VIEW */}
+            {activeTab === 'BOARD' && (
+              <BoardView
+                boardData={null}
+                journeys={journeys}
+                selectedJourney={selectedBoardJourney || journeys[0] || null}
+                onSelectJourney={(j) => setSelectedBoardJourney(j)}
+                onRefresh={loadData}
+                onQuickLogForNode={(_nodeName) => {
+                  setActiveTab('LOG');
+                }}
+                onOpenNewNodeModal={() => handleStartSessionPrompt()}
+              />
+            )}
+
+            {/* SECONDARY: HISTORY & AUDIT */}
+            {activeTab === 'HISTORY' && (
+              <SessionHistoryView
+                sessions={sessions}
+                journeys={journeys}
+                nodes={nodes}
+                onRefresh={loadData}
+              />
+            )}
+          </>
         )}
       </main>
 
-      {/* Offline Status & Sync Banner */}
-      <OfflineIndicator onSyncComplete={loadData} />
-
-      {/* Mobile Bottom Navigation Bar (Large touch targets >= 48px, minimal friction) */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-stone-900/95 backdrop-blur-md border-t border-stone-800 flex items-center justify-around px-2 py-1">
-        <button
-          onClick={() => setActiveTab('BOARD')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[50px] rounded-xl transition-all cursor-pointer ${
-            activeTab === 'BOARD' ? 'text-amber-400 font-semibold' : 'text-stone-400'
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px] mt-1">Board</span>
-        </button>
-
-        {/* Primary Action Button: Fast Voice Logger */}
-        <button
-          onClick={() => setActiveTab('FAST_LOG')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[50px] rounded-xl transition-all cursor-pointer ${
-            activeTab === 'FAST_LOG' ? 'text-amber-400 font-semibold' : 'text-stone-400'
-          }`}
-        >
-          <div className="p-1 rounded-full bg-amber-500/10 border border-amber-500/30">
-            <Mic className="w-4 h-4 text-amber-400" />
-          </div>
-          <span className="text-[10px] mt-0.5">Log</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('SESSION')}
-          className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[50px] rounded-xl transition-all cursor-pointer ${
-            activeTab === 'SESSION' ? 'text-amber-400 font-semibold' : 'text-stone-400'
-          }`}
-        >
-          <Play className="w-5 h-5" />
-          <span className="text-[10px] mt-1">Session</span>
-          {activeSession && (
-            <span className="w-2 h-2 rounded-full bg-emerald-400 absolute top-1 right-3 animate-pulse" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('HIERARCHY')}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[50px] rounded-xl transition-all cursor-pointer ${
-            activeTab === 'HIERARCHY' ? 'text-amber-400 font-semibold' : 'text-stone-400'
-          }`}
-        >
-          <FolderTree className="w-5 h-5" />
-          <span className="text-[10px] mt-1">Plan</span>
-        </button>
-
-        {/* More Menu */}
-        <button
-          onClick={() => setShowMobileMore(!showMobileMore)}
-          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[50px] rounded-xl transition-all cursor-pointer ${
-            showMobileMore ? 'text-amber-400 font-semibold' : 'text-stone-400'
-          }`}
-        >
-          <MoreHorizontal className="w-5 h-5" />
-          <span className="text-[10px] mt-1">More</span>
-        </button>
-      </nav>
-
-      {/* Mobile More Drawer */}
-      {showMobileMore && (
-        <div
-          onClick={() => setShowMobileMore(false)}
-          className="sm:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full bg-stone-900 border border-stone-800 rounded-3xl p-4 space-y-2 mb-16 shadow-2xl text-sm"
-          >
-            <div className="pb-2 border-b border-stone-800 text-xs font-semibold text-stone-400">
-              Additional R&D Views
-            </div>
-            <button
-              onClick={() => {
-                setActiveTab('HISTORY');
-                setShowMobileMore(false);
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-800 text-stone-200"
-            >
-              <History className="w-4 h-4 text-stone-400" />
-              <span>Session History & Drift</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('QUERIES');
-                setShowMobileMore(false);
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-800 text-stone-200"
-            >
-              <BarChart3 className="w-4 h-4 text-stone-400" />
-              <span>Priority Queries & Estimates</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('AUDIT');
-                setShowMobileMore(false);
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-800 text-stone-200"
-            >
-              <ShieldCheck className="w-4 h-4 text-stone-400" />
-              <span>Immutable Audit Trail</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('GUIDE');
-                setShowMobileMore(false);
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-800 text-stone-200"
-            >
-              <BookOpen className="w-4 h-4 text-stone-400" />
-              <span>Philosophy & User Guide</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Modals */}
-      {showJourneySwitcherModal && (
-        <JourneySwitcherModal
-          journeys={journeys}
-          selectedJourneyId={selectedJourneyId}
-          onSelectJourney={(id) => {
-            setSelectedJourneyId(id);
-            setActiveTab('BOARD');
+      <OllamaSettingsModal
+        isOpen={showOllamaModal}
+        onClose={() => setShowOllamaModal(false)}
+        status={ollamaStatus}
+        onStatusUpdated={(st) => setOllamaStatus(st)}
+      />
+
+      <StartSessionModal
+        isOpen={showStartModal}
+        onClose={() => setShowStartModal(false)}
+        targetNode={startModalNode}
+        targetJourney={startModalJourney}
+        journeys={journeys}
+        nodes={nodes}
+        currentCondition={currentCondition}
+        onSessionStarted={(s) => {
+          setActiveSession(s);
+          loadData();
+        }}
+      />
+
+      {activeSession && (
+        <ActiveSessionModal
+          isOpen={showActiveModal}
+          onClose={() => setShowActiveModal(false)}
+          session={activeSession}
+          journey={journeys.find((j) => j.id === activeSession.journey_id)}
+          node={nodes.find((n) => n.id === activeSession.node_id)}
+          currentCondition={currentCondition}
+          onSessionEnded={() => {
+            setActiveSession(null);
+            loadData();
           }}
-          onClose={() => setShowJourneySwitcherModal(false)}
-          onCreateNew={() => {
-            setShowJourneySwitcherModal(false);
-            setShowCreateJourneyModal(true);
-          }}
+          onEntryAdded={() => loadData()}
         />
-      )}
-
-      {showStartSessionModal && (
-        <StartSessionModal
-          journeys={journeys}
-          selectedJourneyId={selectedJourneyId}
-          preselectedNode={preselectedNode}
-          onClose={() => setShowStartSessionModal(false)}
-          onSessionStarted={async () => {
-            await loadData();
-            setActiveTab('SESSION');
-          }}
-        />
-      )}
-
-      {showCreateJourneyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm bg-stone-900 border border-stone-800 rounded-2xl shadow-xl overflow-hidden text-stone-100">
-            <div className="px-5 py-4 border-b border-stone-800">
-              <h3 className="text-sm font-bold">{t(lang, 'createJourney')}</h3>
-            </div>
-            <form onSubmit={handleCreateJourney} className="px-5 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-stone-400 mb-1.5">
-                  {t(lang, 'journeyNameLabel')}
-                </label>
-                <input
-                  type="text"
-                  value={newJourneyName}
-                  onChange={(e) => setNewJourneyName(e.target.value)}
-                  placeholder={t(lang, 'journeyNamePlaceholder')}
-                  className="w-full px-3 py-2 text-sm bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500"
-                  autoFocus
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-400 mb-1.5">
-                  {t(lang, 'journeyDescLabel')}
-                </label>
-                <textarea
-                  value={newJourneyDesc}
-                  onChange={(e) => setNewJourneyDesc(e.target.value)}
-                  placeholder={t(lang, 'journeyDescPlaceholder')}
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500 resize-none"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateJourneyModal(false)}
-                  className="px-3 py-1.5 text-xs text-stone-400 hover:text-stone-200 cursor-pointer"
-                >
-                  {t(lang, 'cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newJourneyName.trim()}
-                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold disabled:opacity-40 cursor-pointer transition"
-                >
-                  {t(lang, 'create')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showNewNodeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm bg-stone-900 border border-stone-800 rounded-2xl shadow-xl overflow-hidden text-stone-100">
-            <div className="px-5 py-4 border-b border-stone-800">
-              <h3 className="text-sm font-bold">Add New Work Item (Node)</h3>
-            </div>
-            <form onSubmit={handleCreateNewNode} className="px-5 py-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-stone-400 mb-1.5">
-                  Item Name
-                </label>
-                <input
-                  type="text"
-                  value={newNodeName}
-                  onChange={(e) => setNewNodeName(e.target.value)}
-                  placeholder="e.g. Supabase migration, Research AI prompt"
-                  className="w-full px-3 py-2 text-sm bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500"
-                  autoFocus
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-400 mb-1.5">
-                  Item Type
-                </label>
-                <select
-                  value={newNodeType}
-                  onChange={(e) => setNewNodeType(e.target.value as NodeType)}
-                  className="w-full px-3 py-2 text-sm bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500"
-                >
-                  <option value="TASK">TASK</option>
-                  <option value="PROJECT">PROJECT</option>
-                  <option value="MILESTONE">MILESTONE</option>
-                  <option value="ROUTE">ROUTE</option>
-                  <option value="NOTE">NOTE</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowNewNodeModal(false)}
-                  className="px-3 py-1.5 text-xs text-stone-400 hover:text-stone-200 cursor-pointer"
-                >
-                  {t(lang, 'cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newNodeName.trim()}
-                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold disabled:opacity-40 cursor-pointer transition"
-                >
-                  Add to Board
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );

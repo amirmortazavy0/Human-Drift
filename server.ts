@@ -11,6 +11,7 @@ import {
   readAppData,
   writeAppData,
   appendEvent,
+  appendAuditLog,
   getCurrentIso,
   DEFAULT_USER_ID,
   STORAGE_FILE,
@@ -20,7 +21,13 @@ import {
   calculateJourneyProgress,
   calculateSessionSummary,
 } from './server/queries';
-import { parseNaturalLanguageLog } from './server/aiLogger';
+import {
+  parseNaturalLanguageLog,
+  checkOllamaHealth,
+  getOllamaConfig,
+  setOllamaConfig,
+  answerQueryChat,
+} from './server/aiLogger';
 import { computeBoardData } from './server/boardService';
 import {
   syncEventToSupabase,
@@ -824,6 +831,14 @@ async function startServer() {
   // SESSION ENTRIES (The moment of the tap)
   // ==========================================
 
+  app.get('/api/entries', (_req: Request, res: Response) => {
+    const data = readAppData();
+    const entries = (data.session_entries || data.entries || []).sort(
+      (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
+    );
+    res.json(entries);
+  });
+
   app.get('/api/sessions/:session_id/entries', (req: Request, res: Response) => {
     const data = readAppData();
     const entries = data.entries
@@ -1170,6 +1185,58 @@ async function startServer() {
     }
   });
 
+  // Check Ollama AI layer connection status
+  app.get('/api/ai/status', async (_req: Request, res: Response) => {
+    try {
+      const status = await checkOllamaHealth();
+      res.json(status);
+    } catch (err: any) {
+      res.json({
+        status: 'offline',
+        url: 'http://localhost:11434',
+        model: 'phi3:mini',
+        available_models: [],
+        provider: 'manual',
+      });
+    }
+  });
+
+  // Update Ollama configuration
+  app.post('/api/ai/settings', (req: Request, res: Response) => {
+    const { url, model } = req.body;
+    const config = setOllamaConfig(url, model);
+    res.json(config);
+  });
+
+  // Query Chat: Natural language analytical answers strictly reading JSON data
+  app.post('/api/ai/query-chat', async (req: Request, res: Response) => {
+    const { question } = req.body;
+    if (!question || !String(question).trim()) {
+      res.status(400).json({ detail: 'Question is required' });
+      return;
+    }
+
+    const data = readAppData();
+    try {
+      const entries = data.session_entries || data.entries || [];
+      const response = await answerQueryChat(
+        String(question).trim(),
+        data.journeys,
+        data.nodes,
+        data.sessions,
+        entries
+      );
+      res.json(response);
+    } catch (err: any) {
+      console.error('[Query Chat] Error answering query:', err);
+      res.status(500).json({
+        answer: 'Failed to answer query. Please try again.',
+        provider: 'manual',
+        sessions_analyzed: 0,
+      });
+    }
+  });
+
   // One-tap quick log commit
   app.post('/api/sessions/quick-log', (req: Request, res: Response) => {
     const data = readAppData();
@@ -1379,6 +1446,42 @@ async function startServer() {
     res.download(STORAGE_FILE, 'human_drift.json');
   });
 
+  app.get('/api/export/json', (_req: Request, res: Response) => {
+    res.download(STORAGE_FILE, 'human_drift.json');
+  });
+
+  // Markdown Obsidian / AI-ingestible Export as specified in Master Build Prompt
+  app.post('/api/export/markdown', (_req: Request, res: Response) => {
+    const { exec } = require('child_process');
+    const exportScript = path.resolve(process.cwd(), 'export.py');
+    const exportDir = path.resolve(process.cwd(), 'export');
+
+    exec(`python3 "${exportScript}" "${exportDir}"`, (error: any, stdout: string, stderr: string) => {
+      if (error) {
+        console.error('[Export Error]', error, stderr);
+        res.status(500).json({ detail: 'Export generation failed', error: String(error) });
+        return;
+      }
+      console.log('[Export Completed]', stdout);
+      res.json({
+        success: true,
+        message: 'Markdown export completed successfully',
+        export_dir: exportDir,
+        zip_url: '/api/export/download',
+      });
+    });
+  });
+
+  app.get('/api/export/download', (_req: Request, res: Response) => {
+    const zipPath = path.resolve(process.cwd(), 'export', 'human_drift_export.zip');
+    const fs = require('fs');
+    if (fs.existsSync(zipPath)) {
+      res.download(zipPath, 'human_drift_markdown_export.zip');
+    } else {
+      res.status(404).json({ detail: 'Export zip not generated yet. Trigger export first.' });
+    }
+  });
+
   app.get(['/health', '/api/health'], (_req: Request, res: Response) => {
     const data = readAppData();
     res.json({
@@ -1386,8 +1489,9 @@ async function startServer() {
       journeys_count: data.journeys.length,
       nodes_count: data.nodes.length,
       sessions_count: data.sessions.length,
-      entries_count: data.entries.length,
-      events_count: data.event_log.length,
+      entries_count: (data.session_entries || data.entries || []).length,
+      events_count: (data.event_log || []).length,
+      audit_count: (data.audit_log || []).length,
     });
   });
 

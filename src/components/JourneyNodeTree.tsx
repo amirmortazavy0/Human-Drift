@@ -19,14 +19,14 @@ import { closeNode, createNode, setNodeEstimate, updateNode } from '../api';
 
 interface JourneyNodeTreeProps {
   journey: Journey;
-  nodes: Node[];
+  nodes?: Node[];
   onRefresh: () => Promise<void>;
   onStartSessionWithNode?: (node: Node) => void;
 }
 
 export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
   journey,
-  nodes,
+  nodes = [],
   onRefresh,
   onStartSessionWithNode,
 }) => {
@@ -129,7 +129,7 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
 
   // Build recursive tree
   const buildTree = (parentId: string | null = null): Node[] => {
-    return nodes
+    return (nodes || [])
       .filter((n) => (parentId ? n.parent_id === parentId : !n.parent_id))
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   };

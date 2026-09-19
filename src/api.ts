@@ -165,6 +165,23 @@ export async function createSession(payload: {
   return res.json();
 }
 
+export async function startSession(payload: {
+  journey_id: string;
+  intention: string;
+  label?: string | null;
+  node_id?: string | null;
+  condition?: import('./types').Condition | null;
+}): Promise<Session> {
+  const res = await createSession({
+    journey_id: payload.journey_id,
+    intention: payload.intention,
+    label: payload.label,
+    initial_node_id: payload.node_id,
+    condition: payload.condition,
+  });
+  return res.session;
+}
+
 export async function getSession(id: string): Promise<Session> {
   const res = await fetch(`${API_BASE}/sessions/${id}`);
   if (!res.ok) throw new Error(`Failed to fetch session: ${res.statusText}`);
@@ -195,6 +212,22 @@ export async function endSession(
   });
   if (!res.ok) throw new Error(`Failed to end session: ${res.statusText}`);
   return res.json();
+}
+
+export async function completeSession(
+  id: string,
+  payload: {
+    reflection?: string | null;
+    quality?: import('./types').SessionQuality | null;
+    end_reason?: string | null;
+  }
+): Promise<Session> {
+  return endSession(id, {
+    reflection: payload.reflection,
+    quality: payload.quality,
+    status: 'COMPLETE',
+    end_reason: (payload.end_reason as any) || 'NATURAL_COMPLETION',
+  });
 }
 
 // Decision 2: Cross-Journey Session Transition
@@ -240,6 +273,12 @@ export async function reviseIntention(
 }
 
 // --- Session Entries ---
+export async function getAllEntries(): Promise<SessionEntry[]> {
+  const res = await fetch(`${API_BASE}/entries`);
+  if (!res.ok) throw new Error(`Failed to fetch entries: ${res.statusText}`);
+  return res.json();
+}
+
 export async function getSessionEntries(sessionId: string): Promise<SessionEntry[]> {
   const res = await fetch(`${API_BASE}/sessions/${sessionId}/entries`);
   if (!res.ok) throw new Error(`Failed to fetch entries: ${res.statusText}`);
@@ -271,6 +310,8 @@ export async function createSessionEntry(
   if (!res.ok) throw new Error(`Failed to create session entry: ${res.statusText}`);
   return res.json();
 }
+
+export const logSessionEntry = createSessionEntry;
 
 // --- Corrections ---
 export async function createCorrection(
@@ -395,3 +436,49 @@ export async function quickLogSession(payload: QuickLogPayload): Promise<QuickLo
   }
   return res.json();
 }
+
+// --- Ollama & AI Layer ---
+export async function getOllamaStatus(): Promise<import('./types').OllamaStatus> {
+  const res = await fetch(`${API_BASE}/ai/status`);
+  if (!res.ok) throw new Error('Failed to get Ollama status');
+  return res.json();
+}
+
+export async function updateOllamaSettings(url: string, model: string): Promise<{ url: string; model: string }> {
+  const res = await fetch(`${API_BASE}/ai/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, model }),
+  });
+  if (!res.ok) throw new Error('Failed to update Ollama settings');
+  return res.json();
+}
+
+export async function askQueryChat(question: string): Promise<import('./types').QueryChatResponse> {
+  const res = await fetch(`${API_BASE}/ai/query-chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to get query answer');
+  }
+  return res.json();
+}
+
+// --- Export Markdown ---
+export async function triggerMarkdownExport(): Promise<{
+  success: boolean;
+  message: string;
+  export_dir: string;
+  zip_url: string;
+}> {
+  const res = await fetch(`${API_BASE}/export/markdown`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Export generation failed');
+  }
+  return res.json();
+}
+

@@ -17,6 +17,7 @@ export interface Journey {
 export type NodeType = 'ROUTE' | 'STATION' | 'PROJECT' | 'TASK' | 'MILESTONE' | 'NOTE';
 export type NodeStatus = 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'DORMANT' | 'COMPLETE';
 export type DoneType = 'DELIVERABLE' | 'TIME_TARGET' | 'MILESTONE_SEQUENCE' | 'OPEN_ENDED';
+export type WorkType = 'DEVELOPMENT' | 'RESEARCH' | 'DESIGN' | 'WRITING' | 'ADMIN' | string;
 
 export interface Node {
   id: string; // UUID
@@ -35,7 +36,7 @@ export interface Node {
   note?: string | null;
 }
 
-export type SessionStatus = 'ACTIVE' | 'COMPLETE' | 'INCOMPLETE' | 'ABANDONED';
+export type SessionStatus = 'ACTIVE' | 'COMPLETE' | 'PAUSED' | 'INCOMPLETE';
 export type SessionQuality = 'POOR' | 'FAIR' | 'GOOD' | 'EXCELLENT';
 
 export interface Session {
@@ -46,7 +47,7 @@ export interface Session {
   started_at: string; // ISO DateTime
   ended_at?: string | null;
   status: SessionStatus;
-  end_reason?: 'NATURAL_COMPLETION' | 'JOURNEY_SWITCH' | 'ABANDONED' | 'PAUSED' | string | null;
+  end_reason?: 'NATURAL_COMPLETION' | 'JOURNEY_SWITCH' | 'PAUSED' | 'INCOMPLETE' | string | null;
   predecessor_session_id?: string | null; // Decision 2: Linked transition from prior session
   successor_session_id?: string | null; // Decision 2: Linked transition to next session
   reflection?: string | null; // logged at session end
@@ -181,16 +182,34 @@ export interface JourneyProgressResult {
   revisions_count: number;
 }
 
-// Complete App Data Store
+// Four Canonical Views
 export type NavTab =
-  | 'BOARD'
-  | 'FAST_LOG'
-  | 'HIERARCHY'
-  | 'SESSION'
-  | 'HISTORY'
-  | 'QUERIES'
-  | 'AUDIT'
-  | 'GUIDE';
+  | 'LOG' // 1. Log Chat
+  | 'QUERY' // 2. Query Chat
+  | 'TASKS' // 3. Task View
+  | 'DRIFT' // 4. Drift View
+  | 'BOARD' // compatibility alias
+  | 'FAST_LOG' // compatibility alias
+  | 'HIERARCHY' // compatibility alias
+  | 'SESSION' // compatibility alias
+  | 'HISTORY' // compatibility alias
+  | 'QUERIES' // compatibility alias
+  | 'AUDIT' // compatibility alias
+  | 'GUIDE'; // compatibility alias
+
+export interface OllamaStatus {
+  status: 'online' | 'offline';
+  url: string;
+  model: string;
+  available_models: string[];
+  provider: 'ollama' | 'gemini' | 'manual';
+}
+
+export interface QueryChatResponse {
+  answer: string;
+  provider: 'ollama' | 'gemini' | 'manual';
+  sessions_analyzed: number;
+}
 
 export interface BoardNodeItem {
   id: string;
@@ -231,7 +250,9 @@ export interface ParsedLogProposal {
   duration_minutes: number;
   intention: string;
   reasoning: string;
-  provider: 'openrouter' | 'gemini' | 'local_heuristic';
+  provider: 'ollama' | 'gemini' | 'local_heuristic';
+  condition?: Condition;
+  entry_types?: EntryType[];
 }
 
 export interface QuickLogPayload {
@@ -253,17 +274,29 @@ export interface QuickLogResponse {
   board: BoardData;
 }
 
+export interface AuditLogEntry {
+  id: string; // UUID
+  timestamp: string; // ISO 8601
+  entity_type: 'JOURNEY' | 'NODE' | 'SESSION' | 'SESSION_ENTRY';
+  entity_id: string;
+  action: 'CREATE' | 'UPDATE' | 'CORRECTION' | 'INTENTION_REVISED' | 'STATUS_CHANGE';
+  details: any;
+  previous_value?: any | null;
+}
+
 export interface AppData {
   version: string;
   created_at: string;
   journeys: Journey[];
   nodes: Node[];
   sessions: Session[];
-  entries: SessionEntry[];
-  corrections: Correction[];
-  conflicts: ConflictLog[];
-  event_log: EventLogEntry[];
-  // Retained legacy collections for zero-loss compatibility
+  session_entries: SessionEntry[];
+  audit_log: AuditLogEntry[];
+  // Compatibility aliases
+  entries?: SessionEntry[];
+  event_log?: EventLogEntry[];
+  corrections?: Correction[];
+  conflicts?: ConflictLog[];
   routes?: any[];
   schedules?: any[];
   rest_days?: any[];

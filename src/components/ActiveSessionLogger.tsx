@@ -439,8 +439,8 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
   };
 
   // Find all revisions in entries
-  const intentionRevisions = entries.filter((e) => e.entry_type === 'INTENTION_REVISED');
-  const activeNode = nodes.find((n) => n.id === activeNodeId);
+  const intentionRevisions = (entries || []).filter((e) => e.entry_type === 'INTENTION_REVISED');
+  const activeNode = (nodes || []).find((n) => n.id === activeNodeId);
 
   return (
     <div className="space-y-4">
@@ -484,7 +484,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             {/* Decision 2: Switch Journey Action */}
             <button
               onClick={() => {
-                const otherJourneys = journeys.filter((j) => j.id !== journey.id);
+                const otherJourneys = (journeys || []).filter((j) => j.id !== journey.id);
                 if (otherJourneys.length > 0) {
                   setTargetJourneyId(otherJourneys[0].id);
                 }
@@ -713,7 +713,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
           {/* Switch Journey (AD-002) */}
           <button
             onClick={() => {
-              const otherJourneys = journeys.filter((j) => j.id !== journey.id);
+              const otherJourneys = (journeys || []).filter((j) => j.id !== journey.id);
               if (otherJourneys.length > 0) {
                 setTargetJourneyId(otherJourneys[0].id);
               }
@@ -1314,7 +1314,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
               </p>
             </div>
 
-            {journeys.filter((j) => j.id !== journey.id).length === 0 ? (
+            {(journeys || []).filter((j) => j.id !== journey.id).length === 0 ? (
               <div className="text-center py-6 space-y-3">
                 <p className="text-xs text-stone-600">
                   No other journeys exist yet. Create another Journey in the Work Hierarchy view to test cross-journey session transitions.
@@ -1339,7 +1339,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
                     className="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-lg text-stone-900"
                     required
                   >
-                    {journeys
+                    {(journeys || [])
                       .filter((j) => j.id !== journey.id)
                       .map((j) => (
                         <option key={j.id} value={j.id}>

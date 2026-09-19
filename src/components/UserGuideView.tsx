@@ -221,6 +221,10 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
   const currentIndex = steps.findIndex(s => s.id === step);
 
   const navLabels: Record<NavTab, string> = {
+    LOG:       lang === 'fa' ? 'چت لاگ' : 'Log Chat',
+    QUERY:     lang === 'fa' ? 'چت پرسش' : 'Query Chat',
+    TASKS:     lang === 'fa' ? 'وظایف' : 'Task View',
+    DRIFT:     lang === 'fa' ? 'دریفت' : 'Drift View',
     BOARD:     lang === 'fa' ? 'بُرد' : 'Board',
     FAST_LOG:  lang === 'fa' ? 'ثبت سریع' : 'Quick Log',
     GUIDE:     lang === 'fa' ? 'راهنما' : 'Guide',

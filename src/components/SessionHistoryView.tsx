@@ -17,16 +17,16 @@ import { getCorrections, getSessionEntries, getSessionSummary } from '../api';
 import { CorrectionModal } from './CorrectionModal';
 
 interface SessionHistoryViewProps {
-  sessions: Session[];
-  journeys: Journey[];
-  nodes: Node[];
-  onRefresh: () => Promise<void>;
+  sessions?: Session[];
+  journeys?: Journey[];
+  nodes?: Node[];
+  onRefresh?: () => Promise<void>;
 }
 
 export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
-  sessions,
-  journeys,
-  nodes,
+  sessions = [],
+  journeys = [],
+  nodes = [],
   onRefresh,
 }) => {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -38,7 +38,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
 
   const [filterJourneyId, setFilterJourneyId] = useState<string>('ALL');
 
-  const filteredSessions = sessions.filter((s) =>
+  const filteredSessions = (sessions || []).filter((s) =>
     filterJourneyId === 'ALL' ? true : s.journey_id === filterJourneyId
   );
 
@@ -47,13 +47,15 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
     setLoadingDetail(true);
     try {
       const [entries, summary, corr] = await Promise.all([
-        getSessionEntries(session.id),
-        getSessionSummary(session.id),
-        getCorrections(),
+        getSessionEntries(session.id).catch(() => []),
+        getSessionSummary(session.id).catch(() => null),
+        getCorrections().catch(() => []),
       ]);
-      setSessionEntries(entries);
+      const safeEntries = Array.isArray(entries) ? entries : [];
+      const safeCorr = Array.isArray(corr) ? corr : [];
+      setSessionEntries(safeEntries);
       setSessionSummary(summary);
-      setCorrections(corr.filter((c) => entries.some((e) => e.id === c.entry_id)));
+      setCorrections(safeCorr.filter((c) => safeEntries.some((e) => e.id === c.entry_id)));
     } catch (err) {
       console.error('Failed to load session details:', err);
     } finally {
@@ -415,7 +417,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                       const discoveryNode = entry.discovery_ref
                         ? nodes.find((n) => n.id === entry.discovery_ref)
                         : null;
-                      const entryCorrections = corrections.filter((c) => c.entry_id === entry.id);
+                      const entryCorrections = (corrections || []).filter((c) => c.entry_id === entry.id);
 
                       return (
                         <div
