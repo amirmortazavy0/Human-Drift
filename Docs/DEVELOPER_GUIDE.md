@@ -502,24 +502,32 @@ The future shared Context Engine is explicitly a **future possibility**, not a c
 
 ---
 
-# 19. Current Prototype
+# 19. Current Prototype & Implementation
 
-The current authoritative prototype specification is:
+The conceptual prototype specification originates in:
 
 `04 - Development/Prototype Spec v1.md`
 
-It defines the current R&D Work logger.
+It defines the domain requirements for the R&D Work logger.
 
-The current prototype stack specified there is:
+### Active Full-Stack Web Architecture
+
+The active repository implements a production-grade local web application:
 
 ```text
-Python
-FastAPI
-SQLite
-Jinja2 / HTML
+Frontend (React 18 + Vite + TypeScript + Tailwind CSS)
+   ↓ HTTP / REST API (Port 3000)
+Backend (Node.js + Express in server.ts)
+   ↓ Atomic JSON Persistence with Rolling Backups
+Database (data/human_drift.json + append-only Event Log)
+   ↓ Optional Local AI
+Ollama Layer (http://localhost:11434, e.g. phi3:mini, offline-first)
 ```
 
-Do not infer a different stack from an older implementation, generated code, or archived development material.
+- **Backend (`server.ts`)**: Express server providing REST endpoints for Journeys, Nodes, Sessions, SessionEntries, Corrections, and Ollama AI parsing proxy.
+- **Persistence Layer (`server/storage.ts`)**: File-based atomic write protocol (writing to `.tmp` before replacing) with timestamped rolling backups (`data/backups/`) and append-only audit event logging.
+- **Client Architecture (`src/`)**: Single-page application rendered on port 3000, state-managed via React hooks in `App.tsx`, utilizing Lucide icons and Tailwind design tokens.
+- **Local AI Engine (`server/ollama.ts`)**: Offline-first natural language log parser querying local Ollama instances (`phi3:mini`, `llama3`, etc.), with instant fallback to heuristic regex parsing when offline.
 
 The prototype is intentionally:
 
@@ -764,6 +772,54 @@ Avoid making the interface look like a generic task manager.
 The UI should reinforce Human Drift's central concept:
 
 > **continuity of meaning.**
+
+### The Five Application Views
+
+The client application (`src/App.tsx`) is structured around five primary lenses:
+
+1. **View 1: `LOG` (`LogChatView`)**
+   - Natural language and voice-enabled conversational logging.
+   - Leverages local Ollama LLM for semantic intention and action extraction with automatic heuristic regex fallback.
+   - Includes a persistent **Sticky Condition Bar** (Energy, Focus, Location, Environment) to capture subjective operational context without friction.
+   - Active session top bar tracking real-time duration and direct context actions.
+
+2. **View 2: `DRIFT` (`DriftView`)**
+   - Direct operational visualization of plan-execution divergence.
+   - Calculates duration variance (estimated vs. actual minutes), context-switch frequencies, intention revision logs, and session completion status.
+   - Correlates environmental/energy conditions with drift incidence.
+
+3. **View 3: `TASKS` (`TaskView` & `JourneyNodeTree`)**
+   - Recursive, arbitrary-depth work hierarchy tree (`ROUTE`, `STATION`, `PROJECT`, `TASK`, `MILESTONE`, `NOTE`).
+   - Supports inline node creation, status management (`PLANNED`, `ACTIVE`, `PAUSED`, `COMPLETE`, `DORMANT`), and starting a focused session directly attached to any node.
+
+4. **View 4: `BOARD` (`BoardView`)**
+   - Status flow board organizing nodes into work-state lanes.
+   - Facilitates scanning across active vs. dormant work without flattening the underlying Journey hierarchy.
+
+5. **View 5: `HISTORY` (`SessionHistoryView`)**
+   - Complete immutable audit trail of past work sessions.
+   - Reconstructs chronological timelines of entries, context switches, discoveries, and end-of-session reflections.
+   - Integrates with the **Append-Only Corrections Modal**, allowing retroactive note amendments without mutating the original historical record.
+
+### Implemented Architectural Decisions
+
+- **AD-001 (Gap-Time Interpretation)**: Time elapsed between discrete session entries defaults to an explicit `Unclassified Context Pause` rather than assuming continuous single-task focus or speculative "overhead".
+- **AD-002 (Single-Journey Sessions)**: A Session belongs to exactly one Journey. When work drifts into another Journey, the current session is formally completed with reason `JOURNEY_SWITCH`, an auditable `CONTEXT_SWITCH_REQUEST` entry is logged, and a linked successor session is initialized in the destination Journey.
+
+### Frontend Engineering & Defensive Data Conventions
+
+To maintain stability across asynchronous data loading, network interruptions, and empty states, all frontend code must observe these rules:
+
+1. **Defensive Array Fallbacks (Anti-Crash Rule)**:
+   - When consuming entity collections (`sessions`, `nodes`, `journeys`, `entries`), component props MUST declare default empty arrays (e.g., `sessions = []`).
+   - All collection iteration and filtering must use defensive guards: `(sessions || []).filter(...)` rather than assuming props are always defined.
+   - This prevents fatal runtime `TypeError: Cannot read properties of undefined (reading 'filter')` errors during initial fetch lifecycles.
+
+2. **Prop Completeness in Parent Containers**:
+   - `App.tsx` is the central state holder. Whenever a view is mounted or swapped, ensure all expected entity collections and refresh callbacks are passed explicitly.
+
+3. **Zero Destructive Mutation**:
+   - The UI must never offer a "Delete Session" or "Rewrite Intention" action that purges historical reality. All changes are recorded as append-only revisions or corrections.
 
 ---
 
