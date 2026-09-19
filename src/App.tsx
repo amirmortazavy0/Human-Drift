@@ -30,6 +30,9 @@ import {
   getAllEntries,
   getOllamaStatus,
   triggerMarkdownExport,
+  authMe,
+  getStoredToken,
+  removeStoredToken,
 } from './api';
 
 // Core 4 Views per Master Build Prompt
@@ -47,8 +50,12 @@ import { SessionHistoryView } from './components/SessionHistoryView';
 import { BoardView } from './components/BoardView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { AuthPage } from './components/AuthPage';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -128,9 +135,62 @@ export default function App() {
     }
   }, []);
 
+  // Check auth on mount
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isMounted = true;
+    const checkUser = async () => {
+      const token = getStoredToken();
+      if (!token) {
+        if (isMounted) {
+          setCurrentUser(null);
+          setAuthChecking(false);
+        }
+        return;
+      }
+      try {
+        const user = await authMe(token);
+        if (isMounted) {
+          setCurrentUser(user.username);
+        }
+      } catch {
+        removeStoredToken();
+        if (isMounted) {
+          setCurrentUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setAuthChecking(false);
+        }
+      }
+    };
+
+    checkUser();
+
+    const onUnauthorized = () => {
+      removeStoredToken();
+      setCurrentUser(null);
+    };
+    window.addEventListener('hd:unauthorized', onUnauthorized);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('hd:unauthorized', onUnauthorized);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser, loadData]);
+
+  const handleLogout = () => {
+    removeStoredToken();
+    setCurrentUser(null);
+    setJourneys([]);
+    setNodes([]);
+    setSessions([]);
+    setEntries([]);
+  };
 
   // Session timer tick
   useEffect(() => {
@@ -174,6 +234,24 @@ export default function App() {
     setStartModalJourney(journey || null);
     setShowStartModal(true);
   };
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-500 flex items-center justify-center text-xs font-mono">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <AuthPage
+        onAuthenticated={(username) => {
+          setCurrentUser(username);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -257,6 +335,15 @@ export default function App() {
                 <span>Start Session</span>
               </button>
             )}
+
+            {/* Small Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition-colors cursor-pointer"
+              title={`Logged in as ${currentUser}. Click to log out.`}
+            >
+              Logout
+            </button>
 
             <PWAInstallButton />
             <OfflineIndicator />

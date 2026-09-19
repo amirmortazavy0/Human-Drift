@@ -17,9 +17,93 @@ import {
 
 const API_BASE = '/api';
 
+// --- Auth Token Management ---
+export function getStoredToken(): string | null {
+  return localStorage.getItem('token') || localStorage.getItem('hd_auth_token');
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem('token', token);
+  localStorage.setItem('hd_auth_token', token);
+}
+
+export function removeStoredToken(): void {
+  localStorage.removeItem('token');
+  localStorage.removeItem('hd_auth_token');
+}
+
+// Authenticated fetch wrapper
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  const token = getStoredToken();
+  const headers = new Headers(init?.headers || {});
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const res = await fetch(url, {
+    ...init,
+    headers,
+  });
+
+  if (res.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/signup')) {
+    window.dispatchEvent(new CustomEvent('hd:unauthorized'));
+  }
+
+  return res;
+}
+
+// --- Auth Endpoints ---
+export async function authSignup(payload: {
+  username: string;
+  password: string;
+}): Promise<{ token: string; username: string }> {
+  const res = await fetch('/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Signup failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function authLogin(payload: {
+  username: string;
+  password: string;
+}): Promise<{ token: string; username: string }> {
+  const res = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Invalid username or password');
+  }
+  return res.json();
+}
+
+export async function authMe(tokenOverride?: string): Promise<{ username: string }> {
+  const token = tokenOverride || getStoredToken();
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+  const res = await fetch('/auth/me', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Unauthorized');
+  }
+  return res.json();
+}
+
 // --- Journeys ---
 export async function getJourneys(): Promise<Journey[]> {
-  const res = await fetch(`${API_BASE}/journeys`);
+  const res = await apiFetch(`${API_BASE}/journeys`);
   if (!res.ok) throw new Error(`Failed to fetch journeys: ${res.statusText}`);
   return res.json();
 }
@@ -29,7 +113,7 @@ export async function createJourney(payload: {
   description?: string | null;
   visibility?: 'PRIVATE' | 'SHARED';
 }): Promise<Journey> {
-  const res = await fetch(`${API_BASE}/journeys`, {
+  const res = await apiFetch(`${API_BASE}/journeys`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -39,7 +123,7 @@ export async function createJourney(payload: {
 }
 
 export async function getJourney(id: string): Promise<Journey> {
-  const res = await fetch(`${API_BASE}/journeys/${id}`);
+  const res = await apiFetch(`${API_BASE}/journeys/${id}`);
   if (!res.ok) throw new Error(`Failed to fetch journey: ${res.statusText}`);
   return res.json();
 }
@@ -48,7 +132,7 @@ export async function updateJourney(
   id: string,
   payload: Partial<Journey>
 ): Promise<Journey> {
-  const res = await fetch(`${API_BASE}/journeys/${id}`, {
+  const res = await apiFetch(`${API_BASE}/journeys/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -68,7 +152,7 @@ export async function getNodes(params?: {
 
   const qs = query.toString();
   const url = qs ? `${API_BASE}/nodes?${qs}` : `${API_BASE}/nodes`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch nodes: ${res.statusText}`);
   return res.json();
 }
@@ -84,7 +168,7 @@ export async function createNode(payload: {
   due_date?: string | null;
   sequence?: number | null;
 }): Promise<Node> {
-  const res = await fetch(`${API_BASE}/nodes`, {
+  const res = await apiFetch(`${API_BASE}/nodes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -94,13 +178,13 @@ export async function createNode(payload: {
 }
 
 export async function getNode(id: string): Promise<Node> {
-  const res = await fetch(`${API_BASE}/nodes/${id}`);
+  const res = await apiFetch(`${API_BASE}/nodes/${id}`);
   if (!res.ok) throw new Error(`Failed to fetch node: ${res.statusText}`);
   return res.json();
 }
 
 export async function updateNode(id: string, payload: Partial<Node>): Promise<Node> {
-  const res = await fetch(`${API_BASE}/nodes/${id}`, {
+  const res = await apiFetch(`${API_BASE}/nodes/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -110,7 +194,7 @@ export async function updateNode(id: string, payload: Partial<Node>): Promise<No
 }
 
 export async function closeNode(id: string, reason: string): Promise<Node> {
-  const res = await fetch(`${API_BASE}/nodes/${id}/close`, {
+  const res = await apiFetch(`${API_BASE}/nodes/${id}/close`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason }),
@@ -123,7 +207,7 @@ export async function setNodeEstimate(
   id: string,
   estimated_minutes: number | null
 ): Promise<Node> {
-  const res = await fetch(`${API_BASE}/nodes/${id}/estimate`, {
+  const res = await apiFetch(`${API_BASE}/nodes/${id}/estimate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ estimated_minutes }),
@@ -143,7 +227,7 @@ export async function getSessions(params?: {
 
   const qs = query.toString();
   const url = qs ? `${API_BASE}/sessions?${qs}` : `${API_BASE}/sessions`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch sessions: ${res.statusText}`);
   return res.json();
 }
@@ -156,7 +240,7 @@ export async function createSession(payload: {
   condition?: import('./types').Condition | null;
   predecessor_session_id?: string | null;
 }): Promise<{ session: Session; conflict?: ConflictLog | null }> {
-  const res = await fetch(`${API_BASE}/sessions`, {
+  const res = await apiFetch(`${API_BASE}/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -183,13 +267,13 @@ export async function startSession(payload: {
 }
 
 export async function getSession(id: string): Promise<Session> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`);
+  const res = await apiFetch(`${API_BASE}/sessions/${id}`);
   if (!res.ok) throw new Error(`Failed to fetch session: ${res.statusText}`);
   return res.json();
 }
 
 export async function getSessionSummary(id: string): Promise<SessionSummaryResult> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/summary`);
+  const res = await apiFetch(`${API_BASE}/sessions/${id}/summary`);
   if (!res.ok) throw new Error(`Failed to fetch session summary: ${res.statusText}`);
   return res.json();
 }
@@ -205,7 +289,7 @@ export async function endSession(
     note?: string | null;
   }
 ): Promise<Session> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/end`, {
+  const res = await apiFetch(`${API_BASE}/sessions/${id}/end`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -246,7 +330,7 @@ export async function switchJourneySession(
   switch_entry: SessionEntry;
   initial_entry?: SessionEntry | null;
 }> {
-  const res = await fetch(`${API_BASE}/sessions/${sourceSessionId}/switch-journey`, {
+  const res = await apiFetch(`${API_BASE}/sessions/${sourceSessionId}/switch-journey`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -263,7 +347,7 @@ export async function reviseIntention(
     condition?: import('./types').Condition;
   }
 ): Promise<{ session: Session; entry: SessionEntry }> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/revise-intention`, {
+  const res = await apiFetch(`${API_BASE}/sessions/${id}/revise-intention`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -274,13 +358,13 @@ export async function reviseIntention(
 
 // --- Session Entries ---
 export async function getAllEntries(): Promise<SessionEntry[]> {
-  const res = await fetch(`${API_BASE}/entries`);
+  const res = await apiFetch(`${API_BASE}/entries`);
   if (!res.ok) throw new Error(`Failed to fetch entries: ${res.statusText}`);
   return res.json();
 }
 
 export async function getSessionEntries(sessionId: string): Promise<SessionEntry[]> {
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/entries`);
+  const res = await apiFetch(`${API_BASE}/sessions/${sessionId}/entries`);
   if (!res.ok) throw new Error(`Failed to fetch entries: ${res.statusText}`);
   return res.json();
 }
@@ -302,7 +386,7 @@ export async function createSessionEntry(
     };
   }
 ): Promise<{ entry: SessionEntry; discovery_node?: Node | null }> {
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/entries`, {
+  const res = await apiFetch(`${API_BASE}/sessions/${sessionId}/entries`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -322,7 +406,7 @@ export async function createCorrection(
     reason?: string | null;
   }
 ): Promise<Correction> {
-  const res = await fetch(`${API_BASE}/entries/${entryId}/corrections`, {
+  const res = await apiFetch(`${API_BASE}/entries/${entryId}/corrections`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -335,7 +419,7 @@ export async function getCorrections(entryId?: string): Promise<Correction[]> {
   const url = entryId
     ? `${API_BASE}/corrections?entry_id=${encodeURIComponent(entryId)}`
     : `${API_BASE}/corrections`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch corrections: ${res.statusText}`);
   return res.json();
 }
@@ -343,13 +427,13 @@ export async function getCorrections(entryId?: string): Promise<Correction[]> {
 // --- Conflicts ---
 export async function getConflicts(resolved?: boolean): Promise<ConflictLog[]> {
   const url = resolved !== undefined ? `${API_BASE}/conflicts?resolved=${resolved}` : `${API_BASE}/conflicts`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch conflicts: ${res.statusText}`);
   return res.json();
 }
 
 export async function resolveConflict(id: string, resolution: string): Promise<ConflictLog> {
-  const res = await fetch(`${API_BASE}/conflicts/${id}/resolve`, {
+  const res = await apiFetch(`${API_BASE}/conflicts/${id}/resolve`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resolution }),
@@ -368,20 +452,20 @@ export async function getDurationVsEstimate(params?: {
   if (params?.node_id) query.set('node_id', params.node_id);
   const qs = query.toString();
   const url = qs ? `${API_BASE}/queries/duration-vs-estimate?${qs}` : `${API_BASE}/queries/duration-vs-estimate`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch duration vs estimate query: ${res.statusText}`);
   return res.json();
 }
 
 export async function getJourneyProgress(journeyId: string): Promise<JourneyProgressResult> {
-  const res = await fetch(`${API_BASE}/queries/journey-progress?journey_id=${encodeURIComponent(journeyId)}`);
+  const res = await apiFetch(`${API_BASE}/queries/journey-progress?journey_id=${encodeURIComponent(journeyId)}`);
   if (!res.ok) throw new Error(`Failed to fetch journey progress: ${res.statusText}`);
   return res.json();
 }
 
 // --- Event Log & System ---
 export async function getEventLog(): Promise<EventLogEntry[]> {
-  const res = await fetch(`${API_BASE}/events`);
+  const res = await apiFetch(`${API_BASE}/events`);
   if (!res.ok) throw new Error(`Failed to fetch event log: ${res.statusText}`);
   return res.json();
 }
@@ -394,7 +478,7 @@ export async function getHealth(): Promise<{
   entries_count: number;
   events_count: number;
 }> {
-  const res = await fetch('/health');
+  const res = await apiFetch('/health');
   if (!res.ok) throw new Error(`Health check failed: ${res.statusText}`);
   return res.json();
 }
@@ -403,7 +487,7 @@ export async function getHealth(): Promise<{
 
 export async function getBoard(journeyId?: string): Promise<BoardData> {
   const url = journeyId ? `${API_BASE}/board/${encodeURIComponent(journeyId)}` : `${API_BASE}/board`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`Failed to fetch board data: ${res.statusText}`);
   return res.json();
 }
@@ -412,7 +496,7 @@ export async function parseLogWithAI(
   message: string,
   journeyId?: string
 ): Promise<ParsedLogProposal> {
-  const res = await fetch(`${API_BASE}/ai/parse-log`, {
+  const res = await apiFetch(`${API_BASE}/ai/parse-log`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, journey_id: journeyId }),
@@ -425,7 +509,7 @@ export async function parseLogWithAI(
 }
 
 export async function quickLogSession(payload: QuickLogPayload): Promise<QuickLogResponse> {
-  const res = await fetch(`${API_BASE}/sessions/quick-log`, {
+  const res = await apiFetch(`${API_BASE}/sessions/quick-log`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -439,13 +523,13 @@ export async function quickLogSession(payload: QuickLogPayload): Promise<QuickLo
 
 // --- Ollama & AI Layer ---
 export async function getOllamaStatus(): Promise<import('./types').OllamaStatus> {
-  const res = await fetch(`${API_BASE}/ai/status`);
+  const res = await apiFetch(`${API_BASE}/ai/status`);
   if (!res.ok) throw new Error('Failed to get Ollama status');
   return res.json();
 }
 
 export async function updateOllamaSettings(url: string, model: string): Promise<{ url: string; model: string }> {
-  const res = await fetch(`${API_BASE}/ai/settings`, {
+  const res = await apiFetch(`${API_BASE}/ai/settings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url, model }),
@@ -455,7 +539,7 @@ export async function updateOllamaSettings(url: string, model: string): Promise<
 }
 
 export async function askQueryChat(question: string): Promise<import('./types').QueryChatResponse> {
-  const res = await fetch(`${API_BASE}/ai/query-chat`, {
+  const res = await apiFetch(`${API_BASE}/ai/query-chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
@@ -474,7 +558,7 @@ export async function triggerMarkdownExport(): Promise<{
   export_dir: string;
   zip_url: string;
 }> {
-  const res = await fetch(`${API_BASE}/export/markdown`, { method: 'POST' });
+  const res = await apiFetch(`${API_BASE}/export/markdown`, { method: 'POST' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Export generation failed');

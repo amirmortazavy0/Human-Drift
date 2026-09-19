@@ -44,12 +44,73 @@ import {
   Session,
   SessionEntry,
 } from './src/types';
+import {
+  signupUser,
+  loginUser,
+  expressAuthMiddleware,
+  AuthenticatedRequest,
+} from './server/auth';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // ==========================================
+  // AUTHENTICATION ENDPOINTS (Public & Me)
+  // ==========================================
+
+  const handleSignup = async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body || {};
+      if (!username || !password) {
+        res.status(400).json({ detail: 'Username and password are required' });
+        return;
+      }
+      const result = await signupUser(username, password);
+      res.status(201).json(result);
+    } catch (err: any) {
+      const msg = err?.message || 'Signup failed';
+      const status = msg.includes('already exists') ? 409 : 400;
+      res.status(status).json({ detail: msg });
+    }
+  };
+
+  const handleLogin = async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body || {};
+      if (!username || !password) {
+        res.status(401).json({ detail: 'Invalid username or password' });
+        return;
+      }
+      const result = await loginUser(username, password);
+      res.json(result);
+    } catch (err: any) {
+      res.status(401).json({ detail: err?.message || 'Invalid username or password' });
+    }
+  };
+
+  // Supported on both root and /api prefixes
+  app.post('/auth/signup', handleSignup);
+  app.post('/api/auth/signup', handleSignup);
+  app.post('/auth/login', handleLogin);
+  app.post('/api/auth/login', handleLogin);
+
+  // JWT Middleware to protect all subsequent API endpoints
+  app.use(expressAuthMiddleware as any);
+
+  const handleMe = (req: Request, res: Response) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) {
+      res.status(401).json({ detail: 'Could not validate credentials' });
+      return;
+    }
+    res.json({ username: user.username });
+  };
+
+  app.get('/auth/me', handleMe);
+  app.get('/api/auth/me', handleMe);
 
   // ==========================================
   // JOURNEYS ENDPOINTS
