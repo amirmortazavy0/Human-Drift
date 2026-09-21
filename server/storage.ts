@@ -13,14 +13,16 @@ import {
   SessionEntry,
 } from '../src/types';
 
-// Canonical storage path specified by Master Build Prompt: backend/data/human_drift.json
+// Canonical storage path: backend/data/pist_data.json (with human_drift.json legacy migration)
 const BACKEND_DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
-const BACKEND_STORAGE_FILE = path.join(BACKEND_DATA_DIR, 'human_drift.json');
-const BACKEND_BACKUP_FILE = path.join(BACKEND_DATA_DIR, 'human_drift.json.bak');
+const BACKEND_STORAGE_FILE = path.join(BACKEND_DATA_DIR, 'pist_data.json');
+const BACKEND_LEGACY_FILE = path.join(BACKEND_DATA_DIR, 'human_drift.json');
+const BACKEND_BACKUP_FILE = path.join(BACKEND_DATA_DIR, 'pist_data.json.bak');
 
 // Mirror directory for backward compatibility
 const ROOT_DATA_DIR = path.resolve(process.cwd(), 'data');
-const ROOT_STORAGE_FILE = path.join(ROOT_DATA_DIR, 'human_drift.json');
+const ROOT_STORAGE_FILE = path.join(ROOT_DATA_DIR, 'pist_data.json');
+const ROOT_LEGACY_FILE = path.join(ROOT_DATA_DIR, 'human_drift.json');
 
 export function getCurrentIso(): string {
   return new Date().toISOString();
@@ -38,8 +40,12 @@ export function ensureStorageFile(): AppData {
 
   const primaryFile = fs.existsSync(BACKEND_STORAGE_FILE)
     ? BACKEND_STORAGE_FILE
+    : fs.existsSync(BACKEND_LEGACY_FILE)
+    ? BACKEND_LEGACY_FILE
     : fs.existsSync(ROOT_STORAGE_FILE)
     ? ROOT_STORAGE_FILE
+    : fs.existsSync(ROOT_LEGACY_FILE)
+    ? ROOT_LEGACY_FILE
     : null;
 
   if (!primaryFile) {
@@ -132,15 +138,25 @@ export function ensureStorageFile(): AppData {
 
 export function readAppData(): AppData {
   const data = ensureStorageFile();
-  // Ensure bidirectional alias consistency
-  if (!data.session_entries && data.entries) {
-    data.session_entries = data.entries;
-  } else if (!data.entries && data.session_entries) {
-    data.entries = data.session_entries;
-  }
-  if (!data.audit_log && data.event_log) {
-    data.audit_log = [];
-  }
+
+  if (!data.journeys) data.journeys = [];
+  if (!data.nodes) data.nodes = [];
+  if (!data.sessions) data.sessions = [];
+  if (!data.audit_log) data.audit_log = [];
+  if (!data.event_log) data.event_log = [];
+  if (!data.conflicts) data.conflicts = [];
+  if (!data.corrections) data.corrections = [];
+
+  // Consolidate entries into a single shared array reference
+  const existingEntries = [
+    ...(Array.isArray(data.session_entries) ? data.session_entries : []),
+    ...(Array.isArray(data.entries) ? data.entries : []),
+  ];
+  const uniqueEntries = Array.from(new Map(existingEntries.map((e) => [e.id, e])).values());
+
+  data.session_entries = uniqueEntries;
+  data.entries = uniqueEntries;
+
   return data;
 }
 
@@ -152,17 +168,31 @@ export function writeAppData(data: AppData): void {
     fs.mkdirSync(ROOT_DATA_DIR, { recursive: true });
   }
 
+  // Deduplicate and consolidate all session entries
+  const allEntries = Array.from(
+    new Map(
+      [
+        ...(Array.isArray(data.session_entries) ? data.session_entries : []),
+        ...(Array.isArray(data.entries) ? data.entries : []),
+      ].map((e) => [e.id, e])
+    ).values()
+  );
+
+  // Keep references in memory identical
+  data.session_entries = allEntries;
+  data.entries = allEntries;
+
   // Canonical format matching Master Prompt:
   // journeys, nodes, sessions, session_entries, audit_log
   const canonicalData = {
     journeys: data.journeys || [],
     nodes: data.nodes || [],
     sessions: data.sessions || [],
-    session_entries: data.session_entries || data.entries || [],
+    session_entries: allEntries,
     audit_log: data.audit_log || [],
   };
 
-  const tempFile = path.join(BACKEND_DATA_DIR, `human_drift.${randomUUID()}.tmp`);
+  const tempFile = path.join(BACKEND_DATA_DIR, `pist_data.${randomUUID()}.tmp`);
   try {
     const jsonStr = JSON.stringify(canonicalData, null, 2);
     fs.writeFileSync(tempFile, jsonStr, 'utf-8');
@@ -177,14 +207,16 @@ export function writeAppData(data: AppData): void {
 
     fs.renameSync(tempFile, BACKEND_STORAGE_FILE);
 
-    // Keep root data copy in sync
+    // Keep legacy file and root copies in sync for full compatibility
     try {
+      fs.writeFileSync(BACKEND_LEGACY_FILE, jsonStr, 'utf-8');
       fs.writeFileSync(ROOT_STORAGE_FILE, jsonStr, 'utf-8');
+      fs.writeFileSync(ROOT_LEGACY_FILE, jsonStr, 'utf-8');
     } catch {
-      // ignore root copy error
+      // ignore secondary copy error
     }
   } catch (err: any) {
-    console.error(`Error saving Human Drift data: ${err.message}`);
+    console.error(`Error saving Pist data: ${err.message}`);
     if (fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);

@@ -40,6 +40,7 @@ import {
   reviseIntention,
   switchJourneySession,
 } from '../api';
+import { formatEntryType, formatLocalTime } from '../utils/formatters';
 import { CorrectionModal } from './CorrectionModal';
 
 interface ActiveSessionLoggerProps {
@@ -803,7 +804,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-2xs text-stone-500">
-                        {new Date(entry.logged_at).toLocaleTimeString()}
+                        {formatLocalTime(entry.logged_at)}
                       </span>
 
                       <span
@@ -823,7 +824,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
                             : 'bg-stone-200 text-stone-800'
                         }`}
                       >
-                        {entry.entry_type}
+                        {formatEntryType(entry.entry_type)}
                       </span>
 
                       {node && (

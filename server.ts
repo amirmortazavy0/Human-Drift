@@ -4,9 +4,11 @@ if (typeof (globalThis as any).__dirname !== 'undefined' && (globalThis as any).
 }
 
 import express, { Request, Response } from 'express';
+import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { createServer as createViteServer } from 'vite';
+import { runMarkdownExport } from './server/exportService';
 import {
   readAppData,
   writeAppData,
@@ -1401,10 +1403,13 @@ async function startServer() {
       syncNodeToSupabase(node);
     }
 
-    // 3. Compute timestamps: started_at = now - duration_minutes
+    // 3. Compute timestamps: started_at = now - duration_minutes (or custom timestamps if provided)
     const durMins = Math.max(1, Number(duration_minutes) || 60);
-    const startTime = new Date(now.getTime() - durMins * 60 * 1000);
-    const startIso = startTime.toISOString();
+    const endIso = req.body.ended_at ? new Date(req.body.ended_at).toISOString() : nowIso;
+    const endDate = new Date(endIso);
+    const startIso = req.body.started_at
+      ? new Date(req.body.started_at).toISOString()
+      : new Date(endDate.getTime() - durMins * 60 * 1000).toISOString();
 
     // 4. Create Session (Intention is locked and immutable)
     const session: Session = {
@@ -1413,14 +1418,14 @@ async function startServer() {
       label: `${work_type} Session`,
       intention: String(intention).trim(),
       started_at: startIso,
-      ended_at: nowIso,
+      ended_at: endIso,
       status: 'COMPLETE',
       end_reason: 'NATURAL_COMPLETION',
       predecessor_session_id: null,
       successor_session_id: null,
-      reflection: null,
-      quality: 'GOOD',
-      note: `Quick logged via Daily Voice/Chat: ${intention}`,
+      reflection: req.body.reflection ? String(req.body.reflection).trim() : null,
+      quality: req.body.quality !== undefined ? req.body.quality : null,
+      note: req.body.note || `Logged work: ${intention}`,
       created_at: nowIso,
       updated_at: nowIso,
     };
@@ -1504,15 +1509,16 @@ async function startServer() {
   });
 
   app.get('/api/export', (_req: Request, res: Response) => {
-    res.download(STORAGE_FILE, 'human_drift.json');
+    res.download(STORAGE_FILE, 'pist_data.json');
   });
 
   app.get('/api/export/json', (_req: Request, res: Response) => {
-    res.download(STORAGE_FILE, 'human_drift.json');
+    res.download(STORAGE_FILE, 'pist_data.json');
   });
 
   // Markdown Obsidian / AI-ingestible Export as specified in Master Build Prompt
   app.post('/api/export/markdown', (_req: Request, res: Response) => {
+<<<<<<< HEAD
     const { execFile } = require('child_process');
     const exportScript = path.resolve(process.cwd(), 'export.py');
     const exportDir = path.resolve(process.cwd(), 'export');
@@ -1525,18 +1531,26 @@ async function startServer() {
         return;
       }
       console.log('[Export Completed]', stdout);
+=======
+    try {
+      const exportDir = path.resolve(process.cwd(), 'export');
+      const result = runMarkdownExport(exportDir);
+      console.log('[Export Completed] Generated markdown export to', result.exportDir);
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
       res.json({
         success: true,
         message: 'Markdown export completed successfully',
-        export_dir: exportDir,
+        export_dir: result.exportDir,
         zip_url: '/api/export/download',
       });
-    });
+    } catch (error: any) {
+      console.error('[Export Error]', error);
+      res.status(500).json({ detail: 'Export generation failed', error: String(error) });
+    }
   });
 
   app.get('/api/export/download', (_req: Request, res: Response) => {
     const zipPath = path.resolve(process.cwd(), 'export', 'human_drift_export.zip');
-    const fs = require('fs');
     if (fs.existsSync(zipPath)) {
       res.download(zipPath, 'human_drift_markdown_export.zip');
     } else {

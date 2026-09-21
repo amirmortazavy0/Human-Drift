@@ -211,6 +211,20 @@ export interface QueryChatResponse {
   sessions_analyzed: number;
 }
 
+export interface BoardRecentEntry {
+  id: string;
+  session_id: string;
+  journey_id: string;
+  journey_name: string;
+  node_id?: string | null;
+  node_name?: string | null;
+  entry_type: string;
+  logged_at: string;
+  note?: string | null;
+  duration_minutes?: number;
+  condition?: Condition;
+}
+
 export interface BoardNodeItem {
   id: string;
   journey_id: string;
@@ -245,6 +259,7 @@ export interface BoardData {
   };
   total_nodes: number;
   total_active_minutes: number;
+  recent_entries: BoardRecentEntry[];
 }
 
 export interface ParsedLogProposal {
@@ -270,6 +285,10 @@ export interface QuickLogPayload {
   duration_minutes: number;
   intention: string;
   condition?: Partial<Condition>;
+  started_at?: string;
+  ended_at?: string;
+  quality?: 'DEEP_FLOW' | 'PRODUCTIVE' | 'DISTRACTED' | 'STRUGGLING';
+  reflection?: string;
 }
 
 export interface QuickLogResponse {

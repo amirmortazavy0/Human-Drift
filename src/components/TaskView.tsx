@@ -8,6 +8,7 @@ import {
   Session,
   SessionEntry,
 } from '../types';
+import { formatLocalDate } from '../utils/formatters';
 import { createJourney, createNode, updateNode, updateJourney } from '../api';
 import {
   FolderPlus,
@@ -151,7 +152,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
     });
 
     let actualMinutes = 0;
-    let lastActiveDate: string | null = null;
+    let lastActiveIso: string | null = null;
 
     for (const s of nodeSessions) {
       if (s.started_at && s.ended_at) {
@@ -160,8 +161,8 @@ export const TaskView: React.FC<TaskViewProps> = ({
         actualMinutes += Math.max(0, Math.round((d2 - d1) / 60000));
       }
       if (s.started_at) {
-        if (!lastActiveDate || s.started_at > lastActiveDate) {
-          lastActiveDate = s.started_at.substring(0, 10);
+        if (!lastActiveIso || s.started_at > lastActiveIso) {
+          lastActiveIso = s.started_at;
         }
       }
     }
@@ -169,7 +170,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
     return {
       sessionCount: nodeSessions.length,
       actualMinutes,
-      lastActiveDate,
+      lastActiveDate: lastActiveIso ? formatLocalDate(lastActiveIso) : null,
     };
   };
 
@@ -352,28 +353,41 @@ export const TaskView: React.FC<TaskViewProps> = ({
             </span>
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
+<<<<<<< HEAD
             Organize Things at any depth and track their current state.
+=======
+            Hierarchical Thing & Sub-item trees. Unlimited depth. Status tracking.
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsCreatingJourney(true)}
-            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs rounded-lg flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
+<<<<<<< HEAD
             <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
             <span>New Thing</span>
+=======
+            <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
+            <span>+ New Thing</span>
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </button>
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Contexts */}
+=======
+      {/* Thing Selector Tabs */}
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
         {journeys.map((j) => (
           <button
             key={j.id}
             onClick={() => setSelectedJourneyId(j.id)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all border cursor-pointer ${
               selectedJourneyId === j.id
                 ? 'bg-zinc-100 text-zinc-900 border-zinc-100 shadow-md font-semibold'
                 : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700'
@@ -387,41 +401,54 @@ export const TaskView: React.FC<TaskViewProps> = ({
       {/* Create Thing Modal */}
       {isCreatingJourney && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+<<<<<<< HEAD
           <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl">
             <h3 className="text-sm font-semibold text-zinc-100 mb-3">Create New Thing</h3>
             <form onSubmit={handleCreateJourney} className="space-y-3">
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Thing Name</label>
+=======
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl">
+            <h3 className="text-sm font-semibold text-zinc-100 mb-3">Create New Thing</h3>
+            <form onSubmit={handleCreateJourney} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Thing Name *</label>
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                 <input
                   type="text"
+                  required
                   value={newJourneyName}
                   onChange={(e) => setNewJourneyName(e.target.value)}
-                  placeholder="e.g. Compiler Engineering, Physical Health, Obsidian Plugin"
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 focus:outline-none"
-                  autoFocus
+                  placeholder="e.g. Pist Architecture, Deep Work, Writing"
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-amber-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1">Description (optional)</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Description</label>
+                <textarea
                   value={newJourneyDesc}
                   onChange={(e) => setNewJourneyDesc(e.target.value)}
+<<<<<<< HEAD
                   placeholder="Optional context for this Thing..."
                   className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 focus:outline-none"
+=======
+                  placeholder="What is this Thing about?"
+                  rows={2}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-amber-500"
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsCreatingJourney(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
+                  className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded text-xs font-bold"
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs rounded-xl cursor-pointer"
                 >
                   Create Thing
                 </button>

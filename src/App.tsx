@@ -14,8 +14,11 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
+  FolderPlus,
+  Clock,
 } from 'lucide-react';
 import {
+  BoardData,
   Condition,
   Journey,
   NavTab,
@@ -29,6 +32,7 @@ import {
   getNodes,
   getSessions,
   getAllEntries,
+  getBoardData,
   getOllamaStatus,
   triggerMarkdownExport,
   authMe,
@@ -47,6 +51,8 @@ import { StickyConditionBar } from './components/StickyConditionBar';
 import { OllamaSettingsModal } from './components/OllamaSettingsModal';
 import { StartSessionModal } from './components/StartSessionModal';
 import { ActiveSessionModal } from './components/ActiveSessionModal';
+import { CreateThingModal } from './components/CreateThingModal';
+import { RetrospectiveLogModal } from './components/RetrospectiveLogModal';
 import { SessionHistoryView } from './components/SessionHistoryView';
 import { BoardView } from './components/BoardView';
 import { PWAInstallButton } from './components/PWAInstallButton';
@@ -62,6 +68,7 @@ export default function App() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [entries, setEntries] = useState<SessionEntry[]>([]);
+  const [boardData, setBoardData] = useState<BoardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<NavTab>('LOG');
 
@@ -86,6 +93,8 @@ export default function App() {
   const [startModalNode, setStartModalNode] = useState<Node | null>(null);
   const [startModalJourney, setStartModalJourney] = useState<Journey | null>(null);
   const [showActiveModal, setShowActiveModal] = useState(false);
+  const [showCreateThingModal, setShowCreateThingModal] = useState(false);
+  const [showRetrospectiveModal, setShowRetrospectiveModal] = useState(false);
 
   // Export State
   const [isExporting, setIsExporting] = useState(false);
@@ -95,7 +104,7 @@ export default function App() {
   // Load all data
   const loadData = useCallback(async () => {
     try {
-      const [jrns, sss, nds, ents, aiStatus] = await Promise.all([
+      const [jrns, sss, nds, ents, aiStatus, boardRes] = await Promise.all([
         getJourneys().catch(() => []),
         getSessions().catch(() => []),
         getNodes().catch(() => []),
@@ -107,6 +116,7 @@ export default function App() {
           available_models: [],
           provider: 'manual' as const,
         })),
+        getBoardData(selectedBoardJourney?.id).catch(() => null),
       ]);
 
       const safeJourneys = Array.isArray(jrns) ? jrns : [];
@@ -119,6 +129,7 @@ export default function App() {
       setNodes(safeNodes);
       setEntries(safeEntries);
       setOllamaStatus(aiStatus);
+      setBoardData(boardRes);
 
       // Check for active session in list
       const ongoing = safeSessions.find((s) => s.status === 'ACTIVE');
@@ -137,7 +148,13 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedBoardJourney]);
+
+  useEffect(() => {
+    getBoardData(selectedBoardJourney?.id)
+      .then(setBoardData)
+      .catch(() => setBoardData(null));
+  }, [selectedBoardJourney]);
 
   // Check auth on mount
   useEffect(() => {
@@ -294,6 +311,26 @@ export default function App() {
 
           {/* Right Action Tools */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Create Thing Button */}
+            <button
+              onClick={() => setShowCreateThingModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs rounded-lg font-medium transition-all cursor-pointer"
+              title="Create a new primary Thing"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              <span>+ New Thing</span>
+            </button>
+
+            {/* Log Past Work Button */}
+            <button
+              onClick={() => setShowRetrospectiveModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs rounded-lg font-medium transition-all cursor-pointer"
+              title="Log completed work from earlier"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>+ Log Past Work</span>
+            </button>
+
             {/* AI Status Badge */}
             <button
               onClick={() => setShowOllamaModal(true)}
@@ -335,7 +372,7 @@ export default function App() {
             {!activeSession && (
               <button
                 onClick={() => handleStartSessionPrompt()}
-                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold rounded-lg transition-all shadow-md"
+                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold rounded-lg transition-all shadow-md cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Start Tracking</span>
@@ -360,14 +397,18 @@ export default function App() {
         <nav aria-label="Main Navigation" className="max-w-6xl mx-auto px-4 flex items-center gap-1 overflow-x-auto border-t border-zinc-800/80 scrollbar-none">
           <button
             onClick={() => setActiveTab('LOG')}
-            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap cursor-pointer ${
               activeTab === 'LOG'
                 ? 'border-emerald-400 text-emerald-300 font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+<<<<<<< HEAD
             <span>1. Log</span>
+=======
+            <span>1. Quick Log</span>
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </button>
 
           <button
@@ -497,7 +538,7 @@ export default function App() {
             {/* SECONDARY: BOARD VIEW */}
             {activeTab === 'BOARD' && (
               <BoardView
-                boardData={null}
+                boardData={boardData}
                 journeys={journeys}
                 selectedJourney={selectedBoardJourney || journeys[0] || null}
                 onSelectJourney={(j) => setSelectedBoardJourney(j)}
@@ -505,7 +546,13 @@ export default function App() {
                 onQuickLogForNode={(_nodeName) => {
                   setActiveTab('LOG');
                 }}
+<<<<<<< HEAD
                 onOpenNewNodeModal={() => setShowCreateThingModal(true)}
+=======
+                onOpenNewNodeModal={() => handleStartSessionPrompt()}
+                onOpenNewThingModal={() => setShowCreateThingModal(true)}
+                onLogPastTime={() => setShowRetrospectiveModal(true)}
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
               />
             )}
 
@@ -516,6 +563,7 @@ export default function App() {
                 journeys={journeys}
                 nodes={nodes}
                 onRefresh={loadData}
+                onOpenRetrospectiveModal={() => setShowRetrospectiveModal(true)}
               />
             )}
           </>
@@ -550,6 +598,7 @@ export default function App() {
         currentCondition={currentCondition}
         onSessionStarted={(s) => {
           setActiveSession(s);
+          setShowActiveModal(true);
           loadData();
         }}
       />
@@ -569,6 +618,24 @@ export default function App() {
           onEntryAdded={() => loadData()}
         />
       )}
+
+      <CreateThingModal
+        isOpen={showCreateThingModal}
+        onClose={() => setShowCreateThingModal(false)}
+        onThingCreated={(newThing) => {
+          setSelectedBoardJourney(newThing);
+          loadData();
+        }}
+      />
+
+      <RetrospectiveLogModal
+        isOpen={showRetrospectiveModal}
+        onClose={() => setShowRetrospectiveModal(false)}
+        journeys={journeys}
+        nodes={nodes}
+        currentCondition={currentCondition}
+        onSessionLogged={loadData}
+      />
     </div>
   );
 }

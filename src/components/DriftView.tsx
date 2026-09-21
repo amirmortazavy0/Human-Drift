@@ -8,6 +8,7 @@ import {
   Session,
   SessionEntry,
 } from '../types';
+import { formatLocalDate, formatLocalTime } from '../utils/formatters';
 import {
   Compass,
   AlertTriangle,
@@ -247,14 +248,18 @@ export const DriftView: React.FC<DriftViewProps> = ({
             <Compass className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-zinc-300">No sessions match current filter</p>
             <p className="text-xs text-zinc-500 mt-1">
+<<<<<<< HEAD
               Start recording Plans and Reality in Log, or start Tracking from Things.
+=======
+              Start logging your work in Quick Log or start an active session in Task View.
+>>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             </p>
           </div>
         ) : (
           displaySessions.map((item) => {
             const s = item.session;
-            const dateStr = s.started_at ? s.started_at.substring(0, 10) : 'Recent';
-            const timeStr = s.started_at ? s.started_at.substring(11, 16) : '';
+            const dateStr = s.started_at ? formatLocalDate(s.started_at) : 'Recent';
+            const timeStr = s.started_at ? formatLocalTime(s.started_at) : '';
 
             return (
               <div
@@ -269,7 +274,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-zinc-300">
-                      {item.journey?.name || 'Journey'}
+                      {item.journey?.name || 'Thing'}
                     </span>
                     {item.node && (
                       <>
