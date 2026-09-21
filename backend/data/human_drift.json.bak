@@ -33,9 +33,9 @@
       "journey_id": "jrn-2f2adca3-75bb-40b1-b601-d919622f76d3",
       "name": "Almost  on changing the names and terminologies...",
       "node_type": "TASK",
-      "status": "COMPLETE",
+      "status": "ACTIVE",
       "created_at": "2026-09-21T16:08:36.345Z",
-      "completed_at": "2026-09-21T16:09:27.964Z"
+      "completed_at": null
     }
   ],
   "sessions": [
@@ -281,45 +281,6 @@
         "status": "COMPLETE",
         "created_at": "2026-09-21T16:08:36.345Z",
         "completed_at": "2026-09-21T16:09:18.376Z"
-      }
-    },
-    {
-      "id": "aud-3ebce9cf-69eb-4037-89fb-d6604e3c8f2b",
-      "timestamp": "2026-09-21T16:09:27.964Z",
-      "entity_type": "NODE",
-      "entity_id": "nod-82f9e3aa-8703-4d75-b62f-8df04c405458",
-      "action": "NODE_STATUS_CHANGED",
-      "details": {
-        "status": "COMPLETE",
-        "completed_at": "2026-09-21T16:09:27.964Z"
-      },
-      "previous_value": {
-        "status": "ACTIVE"
-      }
-    },
-    {
-      "id": "aud-20964a1d-0a8b-4585-861d-826cb1007c51",
-      "timestamp": "2026-09-21T16:09:27.964Z",
-      "entity_type": "NODE",
-      "entity_id": "nod-82f9e3aa-8703-4d75-b62f-8df04c405458",
-      "action": "NODE_UPDATED",
-      "details": {
-        "id": "nod-82f9e3aa-8703-4d75-b62f-8df04c405458",
-        "journey_id": "jrn-2f2adca3-75bb-40b1-b601-d919622f76d3",
-        "name": "Almost  on changing the names and terminologies...",
-        "node_type": "TASK",
-        "status": "COMPLETE",
-        "created_at": "2026-09-21T16:08:36.345Z",
-        "completed_at": "2026-09-21T16:09:27.964Z"
-      },
-      "previous_value": {
-        "id": "nod-82f9e3aa-8703-4d75-b62f-8df04c405458",
-        "journey_id": "jrn-2f2adca3-75bb-40b1-b601-d919622f76d3",
-        "name": "Almost  on changing the names and terminologies...",
-        "node_type": "TASK",
-        "status": "ACTIVE",
-        "created_at": "2026-09-21T16:08:36.345Z",
-        "completed_at": null
       }
     }
   ]

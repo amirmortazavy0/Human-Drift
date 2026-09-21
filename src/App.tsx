@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   History,
   CheckCircle2,
+  XCircle,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -51,6 +52,7 @@ import { BoardView } from './components/BoardView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { AuthPage } from './components/AuthPage';
+import { CreateThingModal } from './components/CreateThingModal';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function App() {
   // Modals
   const [selectedBoardJourney, setSelectedBoardJourney] = useState<Journey | null>(null);
   const [showStartModal, setShowStartModal] = useState(false);
+  const [showCreateThingModal, setShowCreateThingModal] = useState(false);
   const [startModalNode, setStartModalNode] = useState<Node | null>(null);
   const [startModalJourney, setStartModalJourney] = useState<Journey | null>(null);
   const [showActiveModal, setShowActiveModal] = useState(false);
@@ -87,6 +90,7 @@ export default function App() {
   // Export State
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [exportError, setExportError] = useState(false);
 
   // Load all data
   const loadData = useCallback(async () => {
@@ -215,6 +219,7 @@ export default function App() {
   const handleExportMarkdown = async () => {
     setIsExporting(true);
     setExportNotice(null);
+    setExportError(false);
     try {
       const res = await triggerMarkdownExport();
       setExportNotice('Export complete! Downloading Obsidian zip archive...');
@@ -222,6 +227,7 @@ export default function App() {
       window.location.href = res.zip_url || '/api/export/download';
       setTimeout(() => setExportNotice(null), 5000);
     } catch (err: any) {
+      setExportError(true);
       setExportNotice(`Export failed: ${err.message}`);
       setTimeout(() => setExportNotice(null), 5000);
     } finally {
@@ -275,13 +281,13 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-base tracking-tight text-zinc-100">Human Drift</h1>
+                <h1 className="font-bold text-base tracking-tight text-zinc-100">Pist</h1>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 border border-zinc-700 font-mono text-zinc-400">
                   v1.0
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400 hidden sm:block">
-                Intention is immutable. Reality is logged. The gap is drift.
+                Plans are preserved. Reality is logged. The gap is Drift.
               </p>
             </div>
           </div>
@@ -332,7 +338,7 @@ export default function App() {
                 className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold rounded-lg transition-all shadow-md"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Start Session</span>
+                <span>Start Tracking</span>
               </button>
             )}
 
@@ -361,7 +367,7 @@ export default function App() {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span>1. Log Chat</span>
+            <span>1. Log</span>
           </button>
 
           <button
@@ -373,7 +379,7 @@ export default function App() {
             }`}
           >
             <HelpCircle className="w-3.5 h-3.5 text-purple-400" />
-            <span>2. Query Chat</span>
+            <span>2. Ask</span>
           </button>
 
           <button
@@ -385,7 +391,7 @@ export default function App() {
             }`}
           >
             <FolderTree className="w-3.5 h-3.5 text-cyan-400" />
-            <span>3. Task View</span>
+            <span>3. Things</span>
           </button>
 
           <button
@@ -397,7 +403,7 @@ export default function App() {
             }`}
           >
             <Compass className="w-3.5 h-3.5 text-amber-400" />
-            <span>4. Drift View</span>
+            <span>4. Drift</span>
           </button>
 
           <div className="w-px h-4 bg-zinc-800 mx-1 flex-shrink-0" />
@@ -431,8 +437,8 @@ export default function App() {
 
       {/* Export Notification Toast */}
       {exportNotice && (
-        <div className="bg-emerald-950 border-b border-emerald-800 text-emerald-300 text-xs px-4 py-2 text-center font-medium flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className={`${exportError ? 'bg-red-950 border-red-800 text-red-300' : 'bg-emerald-950 border-emerald-800 text-emerald-300'} border-b text-xs px-4 py-2 text-center font-medium flex items-center justify-center gap-2`}>
+          {exportError ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{exportNotice}</span>
         </div>
       )}
@@ -442,7 +448,7 @@ export default function App() {
         {loading ? (
           <div className="p-16 text-center text-zinc-500 text-sm">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-zinc-400" />
-            <span>Loading Human Drift system...</span>
+            <span>Loading Pist...</span>
           </div>
         ) : (
           <>
@@ -499,7 +505,7 @@ export default function App() {
                 onQuickLogForNode={(_nodeName) => {
                   setActiveTab('LOG');
                 }}
-                onOpenNewNodeModal={() => handleStartSessionPrompt()}
+                onOpenNewNodeModal={() => setShowCreateThingModal(true)}
               />
             )}
 
@@ -522,6 +528,16 @@ export default function App() {
         onClose={() => setShowOllamaModal(false)}
         status={ollamaStatus}
         onStatusUpdated={(st) => setOllamaStatus(st)}
+      />
+
+      <CreateThingModal
+        isOpen={showCreateThingModal}
+        onClose={() => setShowCreateThingModal(false)}
+        journeys={journeys}
+        onCreated={async () => {
+          await loadData();
+          setActiveTab('BOARD');
+        }}
       />
 
       <StartSessionModal

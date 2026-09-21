@@ -24,7 +24,7 @@ export const JourneySwitcherModal: React.FC<JourneySwitcherModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/80">
           <div className="flex items-center gap-2 text-stone-900 font-bold text-sm">
             <Compass className="w-4 h-4 text-stone-800" />
-            <span>Select Active Journey Context</span>
+            <span>Select Thing context</span>
           </div>
           <button
             onClick={onClose}
@@ -37,7 +37,7 @@ export const JourneySwitcherModal: React.FC<JourneySwitcherModalProps> = ({
         {/* Content */}
         <div className="p-6 space-y-4">
           <div className="text-xs text-stone-600 leading-relaxed bg-stone-50 p-3 rounded-xl border border-stone-200">
-            A <strong>Journey</strong> is a long-lived investigative context. Human Drift provides
+            A <strong>Thing context</strong> is a long-lived investigative context. Human Drift provides
             two primary reference journeys to test both physical schedule drift and cognitive workflow drift.
           </div>
 
@@ -106,7 +106,7 @@ export const JourneySwitcherModal: React.FC<JourneySwitcherModalProps> = ({
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Create Another Journey</span>
+              <span>Create Another Context</span>
             </button>
 
             <button

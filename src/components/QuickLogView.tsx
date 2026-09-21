@@ -55,7 +55,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
   const [fixDuration, setFixDuration] = useState<number>(60);
   const [fixWorkType, setFixWorkType] = useState<string>('DEVELOPMENT');
   const [fixStatus, setFixStatus] = useState<'ACTIVE' | 'COMPLETE' | 'PLANNED' | 'PAUSED'>('ACTIVE');
-  const [fixIntention, setFixIntention] = useState('');
+  const [fixPlan, setFixPlan] = useState('');
 
   // Conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -107,7 +107,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
       setFixDuration(proposal.duration_minutes);
       setFixWorkType(proposal.work_type);
       setFixStatus(proposal.node_status);
-      setFixIntention(proposal.intention);
+      setFixPlan(proposal.intention);
 
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
@@ -142,7 +142,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
       node_status: isFixMode ? fixStatus : activeProposal.node_status,
       work_type: isFixMode ? fixWorkType : activeProposal.work_type,
       duration_minutes: isFixMode ? fixDuration : activeProposal.duration_minutes,
-      intention: isFixMode ? fixIntention : activeProposal.intention,
+      intention: isFixMode ? fixPlan : activeProposal.intention,
     };
 
     try {
@@ -190,7 +190,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
       <div className="flex items-center justify-between px-4 py-2.5 bg-stone-950/80 border-b border-stone-800 text-xs text-stone-300">
         <div className="flex items-center gap-2">
           <Layers className="w-3.5 h-3.5 text-amber-400" />
-          <span>Active Journey:</span>
+          <span>Active context:</span>
           <span className="font-semibold text-stone-100">{currentJourney?.name || 'All Work'}</span>
         </div>
         {!isOnline && (
@@ -252,7 +252,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
             {!isFixMode ? (
               <div className="space-y-2.5 text-xs">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-stone-400">Node:</span>
+                  <span className="text-stone-400">Thing:</span>
                   <span className="font-semibold text-stone-100 text-right">
                     {activeProposal.node_name}
                   </span>
@@ -278,7 +278,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
                 </div>
 
                 <div className="pt-2 border-t border-stone-900">
-                  <span className="text-stone-400 block mb-1">Declared Intention (Immutable):</span>
+                  <span className="text-stone-400 block mb-1">Original Plan:</span>
                   <p className="p-2.5 rounded-xl bg-stone-900 text-stone-200 font-serif italic text-xs leading-relaxed">
                     "{activeProposal.intention}"
                   </p>
@@ -288,7 +288,7 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
               /* Inline Fix Form */
               <div className="space-y-3 text-xs">
                 <div>
-                  <label className="block text-stone-400 mb-1">Node Name</label>
+                  <label className="block text-stone-400 mb-1">Thing Name</label>
                   <input
                     type="text"
                     value={fixNodeName}
@@ -325,11 +325,11 @@ export const QuickLogView: React.FC<QuickLogViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-stone-400 mb-1">Intention</label>
+                  <label className="block text-stone-400 mb-1">Plan</label>
                   <input
                     type="text"
-                    value={fixIntention}
-                    onChange={(e) => setFixIntention(e.target.value)}
+                    value={fixPlan}
+                    onChange={(e) => setFixPlan(e.target.value)}
                     className="w-full bg-stone-900 border border-stone-700 text-stone-100 px-3 py-2 rounded-xl focus:outline-none focus:border-amber-500"
                   />
                 </div>

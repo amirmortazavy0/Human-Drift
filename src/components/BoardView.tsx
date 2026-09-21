@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Clock,
   CheckCircle2,
@@ -13,13 +13,13 @@ import {
   Plus,
 } from 'lucide-react';
 import { BoardData, BoardNodeItem, Journey, NodeStatus } from '../types';
-import { updateNode } from '../api';
+import { getBoard, updateNode } from '../api';
 
 interface BoardViewProps {
   boardData: BoardData | null;
   journeys: Journey[];
-  selectedJourney: Journey | null;
-  onSelectJourney: (journey: Journey | null) => void;
+  selectedContext: Journey | null;
+  onSelectContext: (journey: Journey | null) => void;
   onRefresh: () => Promise<void>;
   onQuickLogForNode?: (nodeName: string) => void;
   onOpenNewNodeModal?: () => void;
@@ -35,7 +35,31 @@ export const BoardView: React.FC<BoardViewProps> = ({
   onOpenNewNodeModal,
 }) => {
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
+  const [loadedBoard, setLoadedBoard] = useState<BoardData | null>(boardData);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [boardError, setBoardError] = useState<string | null>(null);
   const [updatingNodeId, setUpdatingNodeId] = useState<string | null>(null);
+
+  const refreshBoard = async () => {
+    setBoardLoading(true);
+    setBoardError(null);
+    try {
+      const nextBoard = await getBoard(selectedJourney?.id);
+      setLoadedBoard(nextBoard);
+    } catch (err: any) {
+      setBoardError(err?.message || 'Could not load the Board.');
+    } finally {
+      setBoardLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (boardData) {
+      setLoadedBoard(boardData);
+      return;
+    }
+    void refreshBoard();
+  }, [selectedJourney?.id, boardData]);
 
   const toggleHistory = (nodeId: string) => {
     setExpandedHistory((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
@@ -49,6 +73,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         completed_at: newStatus === 'COMPLETE' ? new Date().toISOString() : null,
       });
       await onRefresh();
+      await refreshBoard();
     } catch (err: any) {
       alert(`Could not update status: ${err.message}`);
     } finally {
@@ -125,7 +150,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     },
   ];
 
-  const columns = boardData?.columns || {
+  const columns = loadedBoard?.columns || {
     planned: [],
     in_progress: [],
     done: [],
@@ -139,7 +164,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-1.5 text-stone-400 text-xs font-medium">
             <Filter className="w-3.5 h-3.5 text-stone-500" />
-            <span>Journey:</span>
+            <span>Context:</span>
           </div>
           <select
             value={selectedJourney ? selectedJourney.id : 'ALL'}
@@ -153,7 +178,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
             }}
             className="bg-stone-950 border border-stone-800 text-stone-200 text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500 transition-colors"
           >
-            <option value="ALL">All Journeys ({journeys.length})</option>
+            <option value="ALL">All contexts ({journeys.length})</option>
             {journeys.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.name} {j.status !== 'ACTIVE' ? `(${j.status})` : ''}
@@ -166,14 +191,14 @@ export const BoardView: React.FC<BoardViewProps> = ({
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5 bg-stone-950 px-3 py-1.5 rounded-xl border border-stone-800">
             <Layers className="w-3.5 h-3.5 text-stone-400" />
-            <span className="text-stone-400">Nodes:</span>
-            <span className="font-semibold text-stone-100">{boardData?.total_nodes ?? 0}</span>
+            <span className="text-stone-400">Things:</span>
+            <span className="font-semibold text-stone-100">{loadedBoard?.total_nodes ?? 0}</span>
           </div>
           <div className="flex items-center gap-1.5 bg-stone-950 px-3 py-1.5 rounded-xl border border-stone-800">
             <Clock className="w-3.5 h-3.5 text-amber-400" />
             <span className="text-stone-400">Total Logged:</span>
             <span className="font-semibold text-amber-300">
-              {formatMinutes(boardData?.total_active_minutes ?? 0)}
+              {formatMinutes(loadedBoard?.total_active_minutes ?? 0)}
             </span>
           </div>
           {onOpenNewNodeModal && (
@@ -182,11 +207,16 @@ export const BoardView: React.FC<BoardViewProps> = ({
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 font-medium text-xs border border-stone-700 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Node</span>
+              <span className="hidden sm:inline">New Thing</span>
             </button>
           )}
         </div>
       </div>
+
+      {boardLoading && <div className="text-xs text-stone-500">Refreshing Board…</div>}
+      {boardError && (
+        <div className="text-xs text-red-300 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">{boardError}</div>
+      )}
 
       {/* 4-Column Board Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -251,7 +281,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-stone-500">Sessions:</span>
+                            <span className="text-stone-500">Tracking:</span>
                             <span className="font-mono text-stone-300">{node.session_count}</span>
                           </div>
                         </div>
@@ -264,7 +294,24 @@ export const BoardView: React.FC<BoardViewProps> = ({
                           </span>
                         </div>
 
-                        {/* Recent Session History Collapsible */}
+                        {node.recent_logs && node.recent_logs.length > 0 && (
+                          <div className="mt-2.5 pt-2 border-t border-stone-900">
+                            <div className="text-[11px] text-stone-400 mb-1.5">Recent Logs</div>
+                            <div className="space-y-1.5">
+                              {node.recent_logs.map((log) => (
+                                <div key={log.id} className="rounded-lg bg-stone-900/60 px-2 py-1.5 text-[11px]">
+                                  <div className="flex items-center justify-between gap-2 text-stone-500">
+                                    <span>{log.entry_type.replaceAll('_', ' ')}</span>
+                                    <span>{formatRelativeTime(log.logged_at)}</span>
+                                  </div>
+                                  {log.note && <div className="mt-0.5 text-stone-300 line-clamp-2">{log.note}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recent Tracking Collapsible */}
                         {node.recent_sessions && node.recent_sessions.length > 0 && (
                           <div className="mt-2.5 pt-2 border-t border-stone-900">
                             <button
@@ -307,9 +354,9 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             <button
                               onClick={() => onQuickLogForNode(node.name)}
                               className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-950/40 hover:bg-amber-950/70 border border-amber-900/40 rounded-lg px-2 py-1.5 transition cursor-pointer"
-                              title="Log work on this node"
+                              title="Log reality for this Thing"
                             >
-                              <span>+ Log Work</span>
+                              <span>+ Log</span>
                             </button>
                           )}
 

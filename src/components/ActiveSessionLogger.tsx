@@ -116,7 +116,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
   const [switchIntention, setSwitchIntention] = useState('');
   const [switchReason, setSwitchReason] = useState('');
 
-  // End Session Form Inputs
+  // End Tracking Form Inputs
   const [reflection, setReflection] = useState('');
   const [quality, setQuality] = useState<SessionQuality>('GOOD');
   const [endStatus, setEndStatus] = useState<'COMPLETE' | 'INCOMPLETE' | 'ABANDONED'>('COMPLETE');
@@ -199,7 +199,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
 
   // --- ACTIONS ---
 
-  // 1. Start Task
+  // 1. Start Thing
   const handleStartTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -333,7 +333,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
     }
   };
 
-  // 6. Revise Intention (Rule 2: Never overwrite original intention)
+  // 6. Revise Plan (Rule 2: Never overwrite original intention)
   const handleReviseIntention = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newIntention.trim()) return;
@@ -377,7 +377,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
     }
   };
 
-  // 8. End Session
+  // 8. End Tracking
   const handleEndSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -395,7 +395,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
     }
   };
 
-  // 9. Switch Journey (Architecture Decision 2: Cross-Journey Session Scope)
+  // 9. Switch context (Architecture Decision 2: Cross-Journey Session Scope)
   const handleSwitchJourney = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetJourneyId || !switchIntention.trim()) return;
@@ -481,7 +481,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
               </div>
             </div>
 
-            {/* Decision 2: Switch Journey Action */}
+            {/* Decision 2: Switch context Action */}
             <button
               onClick={() => {
                 const otherJourneys = (journeys || []).filter((j) => j.id !== journey.id);
@@ -497,7 +497,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
               title="End this session (reason: JOURNEY_SWITCH) and start a linked successor session in another Journey"
             >
               <Shuffle className="w-3 h-3" />
-              <span>Switch Journey</span>
+              <span>Switch context</span>
             </button>
 
             <button
@@ -505,7 +505,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
               className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-medium transition-colors cursor-pointer"
             >
               <Square className="w-3 h-3 fill-current" />
-              <span>End Session</span>
+              <span>End Tracking</span>
             </button>
           </div>
         </div>
@@ -651,7 +651,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             {activeNode ? (
               <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
                 <Play className="w-3 h-3 fill-current text-emerald-600" />
-                <span>Active Task: {activeNode.name}</span>
+                <span>Active Thing: {activeNode.name}</span>
               </span>
             ) : (
               <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
@@ -666,7 +666,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {/* Start Task */}
+          {/* Start Thing */}
           <button
             onClick={() => {
               setSelectedNodeId(activeNodeId || '');
@@ -675,7 +675,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             className="flex flex-col items-center justify-center p-3 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 transition-colors cursor-pointer"
           >
             <Play className="w-4 h-4 text-emerald-600 mb-1" />
-            <span className="text-2xs font-semibold">Start Task</span>
+            <span className="text-2xs font-semibold">Start Thing</span>
           </button>
 
           {/* Complete Task */}
@@ -710,7 +710,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             <span className="text-2xs font-semibold">Switch Context</span>
           </button>
 
-          {/* Switch Journey (AD-002) */}
+          {/* Switch context (AD-002) */}
           <button
             onClick={() => {
               const otherJourneys = (journeys || []).filter((j) => j.id !== journey.id);
@@ -723,10 +723,10 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
               setModalType('SWITCH_JOURNEY');
             }}
             className="flex flex-col items-center justify-center p-3 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 transition-colors cursor-pointer"
-            title="Switch Journey (AD-002): completes session and starts linked successor in new journey"
+            title="Switch context (AD-002): completes session and starts linked successor in new journey"
           >
             <Shuffle className="w-4 h-4 text-purple-700 mb-1" />
-            <span className="text-2xs font-semibold text-purple-800">Switch Journey</span>
+            <span className="text-2xs font-semibold text-purple-800">Switch context</span>
           </button>
 
           {/* Discovery */}
@@ -741,7 +741,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             <span className="text-2xs font-semibold">Log Discovery</span>
           </button>
 
-          {/* Revise Intention */}
+          {/* Revise Plan */}
           <button
             onClick={() => {
               setNewIntention('');
@@ -750,7 +750,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
             className="flex flex-col items-center justify-center p-3 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 transition-colors cursor-pointer"
           >
             <Edit3 className="w-4 h-4 text-stone-600 mb-1" />
-            <span className="text-2xs font-semibold">Revise Intention</span>
+            <span className="text-2xs font-semibold">Revise Plan</span>
           </button>
 
           {/* Note */}
@@ -771,7 +771,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
       <div className="bg-white border border-stone-200 rounded-xl p-5 shadow-xs">
         <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-stone-100">
           <div>
-            <h3 className="text-sm font-semibold text-stone-900">Session Evidence Log</h3>
+            <h3 className="text-sm font-semibold text-stone-900">Tracking Evidence Log</h3>
             <p className="text-2xs text-stone-500">
               Atomic SessionEntries with attached condition snapshots
             </p>
@@ -870,11 +870,11 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
 
       {/* --- ACTION MODALS --- */}
 
-      {/* Start Task Modal */}
+      {/* Start Thing Modal */}
       {modalType === 'START_TASK' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-stone-200 rounded-xl shadow-xl p-5">
-            <h3 className="text-sm font-semibold text-stone-900 mb-2">Start Task</h3>
+            <h3 className="text-sm font-semibold text-stone-900 mb-2">Start Thing</h3>
             <form onSubmit={handleStartTask} className="space-y-3">
               <div>
                 <label className="block text-2xs font-semibold uppercase text-stone-600 mb-1">
@@ -944,7 +944,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
                   disabled={submitting || (!selectedNodeId && !quickNewNodeName.trim())}
                   className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-medium disabled:opacity-50"
                 >
-                  Start Task
+                  Start Thing
                 </button>
               </div>
             </form>
@@ -1114,13 +1114,13 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
         </div>
       )}
 
-      {/* Revise Intention Modal (Rule 2) */}
+      {/* Revise Plan Modal (Rule 2) */}
       {modalType === 'REVISE_INTENTION' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-stone-200 rounded-xl shadow-xl p-5">
             <div className="flex items-center gap-2 text-stone-900 font-medium text-sm mb-1">
               <Edit3 className="w-4 h-4 text-sky-600" />
-              <span>Revise Session Intention</span>
+              <span>Revise Plan</span>
             </div>
             <p className="text-xs text-stone-500 mb-3">
               Domain Model v1: The original intention is locked and preserved. This revision records
@@ -1214,11 +1214,11 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
         </div>
       )}
 
-      {/* End Session Modal */}
+      {/* End Tracking Modal */}
       {modalType === 'END_SESSION' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-stone-200 rounded-xl shadow-xl p-5">
-            <h3 className="text-base font-semibold text-stone-900 mb-1">End Session</h3>
+            <h3 className="text-base font-semibold text-stone-900 mb-1">End Tracking</h3>
             <p className="text-xs text-stone-500 mb-3">
               Record final reflection and subjective quality of the work period.
             </p>
@@ -1289,7 +1289,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
         </div>
       )}
 
-      {/* Switch Journey Modal (Architecture Decision 2) */}
+      {/* Switch context Modal (Architecture Decision 2) */}
       {modalType === 'SWITCH_JOURNEY' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg bg-white border border-stone-200 rounded-xl shadow-xl p-6">
@@ -1298,7 +1298,7 @@ export const ActiveSessionLogger: React.FC<ActiveSessionLoggerProps> = ({
                 <Shuffle className="w-4 h-4" />
               </span>
               <h3 className="text-base font-semibold text-stone-900">
-                Switch Journey (Linked Session Transition)
+                Switch context (Linked Session Transition)
               </h3>
             </div>
 

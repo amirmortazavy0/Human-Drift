@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Condition, Journey, Node, Session } from '../types';
-import { startSession } from '../api';
+import { createJourney, startSession } from '../api';
 import { Play, BatteryCharging, Brain, MapPin, Volume2, X, Lock } from 'lucide-react';
 
 interface StartSessionModalProps {
@@ -34,18 +34,35 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
   const [condition, setCondition] = useState<Condition>(currentCondition);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setJourneyId(targetJourney?.id || targetNode?.journey_id || journeys.find((j) => j.status === 'ACTIVE')?.id || journeys[0]?.id || '');
+    setNodeId(targetNode?.id || '');
+    setIntention(targetNode ? `Work on ${targetNode.name}` : '');
+    setCondition(currentCondition);
+  }, [isOpen, targetJourney?.id, targetNode?.id, targetNode?.journey_id, journeys, currentCondition]);
+
   if (!isOpen) return null;
 
   const journeyNodes = (nodes || []).filter((n) => n.journey_id === journeyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!intention.trim() || !journeyId) return;
+    if (!intention.trim()) return;
 
     setIsSubmitting(true);
     try {
+      let effectiveJourneyId = journeyId;
+      if (!effectiveJourneyId) {
+        const createdJourney = await createJourney({
+          name: 'My Things',
+          description: 'Default context created by Pist.',
+        });
+        effectiveJourneyId = createdJourney.id;
+      }
+
       const created = await startSession({
-        journey_id: journeyId,
+        journey_id: effectiveJourneyId,
         node_id: nodeId || null,
         intention: intention.trim(),
         label: targetNode ? targetNode.name : 'Focus Session',
@@ -76,15 +93,15 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
             <Play className="w-5 h-5 fill-current" />
           </div>
           <div>
-            <h3 className="font-bold text-zinc-100 text-base">Start Intended Session</h3>
-            <p className="text-xs text-zinc-400">Lock your intention before reality unfolds</p>
+            <h3 className="font-bold text-zinc-100 text-base">Start Tracking</h3>
+            <p className="text-xs text-zinc-400">Set your Plan before reality unfolds.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           {/* Target Journey */}
           <div>
-            <label className="block text-zinc-400 mb-1 font-medium">Journey</label>
+            <label className="block text-zinc-400 mb-1 font-medium">Context</label>
             <select
               value={journeyId}
               onChange={(e) => {
@@ -103,7 +120,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
 
           {/* Target Node */}
           <div>
-            <label className="block text-zinc-400 mb-1 font-medium">Target Node (optional)</label>
+            <label className="block text-zinc-400 mb-1 font-medium">Thing (optional)</label>
             <select
               value={nodeId}
               onChange={(e) => {
@@ -128,24 +145,24 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
           <div className="space-y-1">
             <label className="block text-zinc-300 font-semibold flex items-center gap-1.5">
               <Lock className="w-3 h-3 text-cyan-400" />
-              <span>Intention Statement (Immutable Rule 1)</span>
+              <span>Plan</span>
             </label>
             <textarea
               value={intention}
               onChange={(e) => setIntention(e.target.value)}
-              placeholder="What specifically do you intend to accomplish in this session?"
+              placeholder="What do you plan to do during this Tracking?"
               rows={2}
               required
               className="w-full bg-zinc-950 border border-cyan-700/50 rounded-lg p-2.5 text-zinc-100 focus:outline-none focus:border-cyan-500 resize-none font-medium"
             />
             <p className="text-[11px] text-zinc-500">
-              Session intention is locked at start and will never be modified.
+              The original Plan is preserved. Changes are recorded as revisions.
             </p>
           </div>
 
           {/* Initial Condition */}
           <div className="space-y-2 pt-1 border-t border-zinc-800">
-            <label className="block text-zinc-400 font-medium">Initial Condition State</label>
+            <label className="block text-zinc-400 font-medium">Current context</label>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="text-[10px] text-zinc-500">Energy</span>

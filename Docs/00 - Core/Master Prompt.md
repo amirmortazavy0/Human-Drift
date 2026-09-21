@@ -1,154 +1,151 @@
-## What Human Drift Is
+# Human Drift / Pist — Master Prompt
 
-Human Drift is an R&D project investigating plan-execution drift.
+## Product
 
-The product preserves the relationship between: **Intention → Reality →  
-Drift → Understanding → Adaptation**
+Human Drift is an R&D product about plan-execution drift. User-facing name: **Pist**.
 
-It is not primarily a productivity app, task manager, habit tracker, or  
-calendar. Its long-term purpose is continuity of meaning.
+Core loop:
 
-Core principle:
+**Plan → Reality → Drift → Understanding → Adaptation**
 
-> Intention is immutable. Reality is logged. The gap between them is  
-> drift.
+Pist preserves the difference between what was planned and what actually happened. It is not primarily a productivity app, task manager, habit tracker, or calendar.
 
-Full philosophy: `Vision & Philosophy.md`
+## Locked product language
 
-## Current Canonical Model
+| Concept | User-facing term |
+|---|---|
+| Product | Pist |
+| User | Drifter |
+| Universal object | Thing |
+| Intention | Plan |
+| Session | Tracking |
+| SessionEntry | Log / Entry |
+| Natural-language logging | Quick Log |
+| Analytical interface | Ask / Ask Pist |
+| Gap between Plan and Reality | Drift |
 
-The authoritative domain model is `Domain Model v1.md`.
+Do not expose Journey, Node, Session, SessionEntry, Intention, Commitment, Thread, internal event names, or storage filenames as product terminology. Internal code may retain those names.
 
-Universal structure:
+## Domain model
 
-```
-Journey
-└── Node
-    └── Node ...
-        └── Session
-            └── SessionEntry
-                └── Condition
-```
+Internal model:
 
-More precisely: - Journey = long-lived context - Node = any unit of work  
-at any hierarchy level - Session = one working period - SessionEntry =  
-one logged event/tap - Condition = contextual snapshot at the moment of  
-the entry
+**Journey → Node → Session → SessionEntry**
 
-Node depth is intentionally flexible. Do not impose a maximum depth.
+with Condition as contextual state.
 
-A Route, Station, Project, Task, Milestone, or Note can all be Nodes.  
-Different use cases do not receive different domain models.
+User-facing translation:
 
-## Intention
+**Thing → Thing → Tracking → Log**
 
-A Session's initial intention is declared at start and is immutable.
+There is no artificial hierarchy depth and no fixed Project → Task model. Do not create separate domain models for different use cases.
 
-If direction changes during the session, the original intention remains  
-intact and the change is recorded as an intention-revision event.
+## Plan and Reality
 
-The system must preserve: 1. what was originally intended; 2. what  
-actually happened; 3. what changed between them.
+The original Plan is preserved.
 
-## Evidence and History
+If the Plan changes:
 
-Keep observation, event, derived state, and inference distinct.
+- preserve the original
+- record the revision
+- preserve timing when known
+- preserve the reason when known
+- never silently overwrite history
 
-The system uses a hybrid state/history architecture: - current state is  
-stored directly; - mutations append to the Event Log; - the Event Log is  
-the audit trail; - corrections preserve original values.
+Logs record Reality. Historical records must remain auditable.
 
-Do not silently overwrite history.
+Prefer **append → correct → supersede** over overwrite or erase.
 
-## Current Journeys
+## Evidence and Drift
 
-### Journey-001 --- Train Performance Study
+Keep these separate:
 
-The first experimental Journey. It validates the universal model using  
-station-by-station commute observations.
+**Observed fact → Recorded event → Derived state → Inference**
 
-The train is a real use case and dataset, not the definition of the  
-product architecture.
+Drift is the evidence-supported gap between Plan and Reality. It is not automatically failure, lateness, inactivity, pausing, or a Plan change.
 
-### Journey-002 --- R&D Work
+Do not present inference as fact.
 
-The second experimental Journey. It validates Human Drift against real  
-work where hierarchy, context, intention, interruption, and discovery  
-can change dynamically.
+## Architecture
 
-Do not force this Journey into a fixed Project → Task structure.
+Current architecture is hybrid:
 
-## Current Development Direction
+**stored current state + append-only historical event/audit log**
 
-The current prototype is the **R&D Work Logger**, specified in:
+Do not replace it with pure event sourcing without an explicit architectural decision.
 
-`04 - Development/Prototype Spec v1.md`
+Preserve the existing technology stack and architecture unless there is a concrete reason to change it. Avoid unnecessary migrations, abstractions, frameworks, and rewrites.
 
-It implements the current Domain Model rather than the superseded  
-train-specific Phase 1 data model.
+## Current implementation priorities
 
-The prototype is intentionally disposable code with a production-grade  
-domain model. Real logged data is evidence and must be preserved.
+### P0 — Broken core behavior
 
-Core prototype behavior: - create Journeys and flexible Node trees; -  
-start a Session and lock its intention; - log SessionEntries; - capture  
-sticky Condition values; - record task starts/completions/pauses,  
-context switches, discoveries, intention revisions, and notes; - end  
-sessions with reflection and quality; - browse history; - answer  
-priority duration/progress queries.
+1. Create Thing through the UI and persist it.
+2. Logs must persist and appear on the Board.
+3. Start Tracking must perform the complete UI → API → state → history → persistence flow.
+4. Fix backend 500 errors at their root cause.
+5. Export must work end-to-end without misleading success/error UI.
 
-Explicitly outside this prototype: - multi-user collaboration; - AI  
-drift classification; - Journey-001 train logging; - broad analytics; -  
-governance/permission system; - hardcoded demo data.
+### P1 — Product language and UX
 
-## Architecture Authority
+Use the locked vocabulary. Use local display time. Focus and Energy are editable contextual observations. Work Type choices must be meaningful.
 
-Before changing architecture, read: - `00 - Core/Domain Model v1.md` -  
-`03 - Architecture/Architecture Decisions.md` -  
-`03 - Architecture/Event Schema v1.md`
+### Out of scope unless explicitly requested
 
-These are authoritative over older Phase 1 specifications.
+- location detection
+- Drift Mode
+- social/community
+- advanced Ask intelligence
+- major Audit Trail redesign
+- speculative automation
+- unnecessary profile/settings complexity
 
-The old Phase 1 data model and related train-specific implementation  
-documents are historical unless explicitly reinstated.
+## Testing
 
-## Research Discipline
+Verify in this order:
 
-Human Drift is discovered through evidence.
+1. Typecheck
+2. Lint/static checks
+3. Build
+4. Targeted tests
+5. API/integration behavior
+6. Browser/UI behavior
 
-Separate: - observation - evidence - hypothesis - interpretation -  
-decision - implementation
+Never claim a test passed unless it was actually run.
 
-Real usage of the prototype is research data. The next domain-model  
-revision should be driven by what real use reveals.
+For failures:
 
-## Vault Structure
+**reproduce → locate layer → inspect error → find root cause → fix → re-test**
 
-```
-00 - Core/          → philosophy, domain, glossary, core model
-01 - Research/      → evidence, hypotheses, research
-02 - Product/       → principles, journeys, product requirements
-03 - Architecture/  → architecture, events, permissions, history
-04 - Development/   → prototype and implementation work
-05 - Future Outreach/ → future-stage material
-Inbox/              → fast capture
-Templates/          → reusable note templates
-_History/           → superseded material
-```
+## Documentation synchronization
 
-## Session Behavior
+Code and active documentation must remain synchronized.
 
-At the start of work: 1. identify the actual question or task; 2.  
-consult the relevant authoritative vault documents; 3. distinguish  
-settled decisions from open questions; 4. work from current truth, not  
-historical assumptions.
+When a product or architecture decision changes, update the relevant active files under `Docs/`, including this Master Prompt and `Docs/03 - Architecture/Architecture Decisions.md` when architecture is affected.
 
-Do not ask the user which thread to choose merely because the old Master  
-Prompt said so. Follow the user's actual request.
+Preserve historical decisions. Mark superseded decisions rather than deleting history.
 
-When proposing changes, classify them as: **Observation / Evidence /  
-Hypothesis / Product Requirement / Architecture Decision / Development  
-Task / Future Possibility.**
+## Definition of done
 
-When in doubt, preserve reality and uncertainty rather than inventing  
-certainty.
+A change is complete only when:
+
+- requested behavior works
+- user-facing terminology is correct
+- relevant static checks/build/tests pass
+- API/UI behavior is verified where applicable
+- Plan and Reality remain distinguishable
+- historical data is preserved
+- no unnecessary architecture was introduced
+- relevant documentation is synchronized
+
+## Fundamental rule
+
+**When choosing between making Pist look correct and making it accurately represent reality, choose accurate representation of reality.**
+
+Always preserve the difference between:
+
+**what was planned**
+
+and
+
+**what actually happened.**

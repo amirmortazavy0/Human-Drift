@@ -60,7 +60,7 @@ export const EventLogView: React.FC = () => {
           </button>
           <a
             href="/api/export"
-            download="human_drift.json"
+            download="pist-export.json"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-lg text-xs font-medium transition-colors"
           >
             <Download className="w-3.5 h-3.5" />

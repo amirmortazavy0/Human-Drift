@@ -10,7 +10,7 @@ export const strings = {
     // App shell
     appName: 'Human Drift',
     loading: 'Loading…',
-    noJourneySelected: 'No journey selected',
+    noThing contextSelected: 'No journey selected',
 
     // Nav tabs
     board: 'Board',
@@ -23,21 +23,21 @@ export const strings = {
     audit: 'Audit',
 
     // Header
-    startSession: 'Start Session',
+    startSession: 'Start Tracking',
     activeSession: 'Active',
-    newJourney: 'New Journey',
-    switchJourney: 'Switch Journey',
+    newThing context: 'New Thing',
+    switchThing context: 'Switch Thing context',
 
-    // Journey / node tree
+    // Thing context / node tree
     journeyStarted: 'Started',
     addNode: 'Add item',
     noNodes: 'Nothing here yet',
     noNodesHint: 'Add your first project or task to get started.',
-    startSessionHere: 'Start session on this item',
+    startSessionHere: 'Start Tracking on this Thing',
 
-    // Journey create modal
-    createJourney: 'New Journey',
-    journeyNameLabel: 'Journey name',
+    // Thing context create modal
+    createThing context: 'New Thing',
+    journeyNameLabel: 'Thing context name',
     journeyNamePlaceholder: 'e.g. R&D Work, Learn Python',
     journeyDescLabel: 'Description (optional)',
     journeyDescPlaceholder: 'What is the overarching intention?',
@@ -47,9 +47,9 @@ export const strings = {
     // First run
     firstRunTitle: 'What are you working on?',
     firstRunSubtitle: 'Start with the most immediate thing. You can add more later.',
-    firstRunJourneyLabel: 'Name this context',
-    firstRunJourneyPlaceholder: 'e.g. R&D Work, Learn Python, IG Research',
-    firstRunJourneyHint: 'This becomes your Journey — the long-lived container for related work.',
+    firstRunThing contextLabel: 'Name this context',
+    firstRunThing contextPlaceholder: 'e.g. R&D Work, Learn Python, IG Research',
+    firstRunThing contextHint: 'This becomes your Thing context — the long-lived container for related work.',
     firstRunNodeLabel: 'First thing to work on',
     firstRunNodePlaceholder: 'e.g. Research competitors, Write domain model',
     firstRunNodeHint: 'You can break this into subtasks once inside.',
@@ -73,7 +73,7 @@ export const strings = {
     // App shell
     appName: 'Human Drift',
     loading: 'در حال بارگذاری…',
-    noJourneySelected: 'سفری انتخاب نشده',
+    noThing contextSelected: 'سفری انتخاب نشده',
 
     // Nav tabs
     board: 'بُرد',
@@ -88,18 +88,18 @@ export const strings = {
     // Header
     startSession: 'شروع جلسه',
     activeSession: 'جلسه فعال',
-    newJourney: 'سفر جدید',
-    switchJourney: 'تغییر سفر',
+    newThing context: 'سفر جدید',
+    switchThing context: 'تغییر سفر',
 
-    // Journey / node tree
+    // Thing context / node tree
     journeyStarted: 'شروع',
     addNode: 'افزودن',
     noNodes: 'هنوز چیزی نیست',
     noNodesHint: 'اولین پروژه یا وظیفه خود را اضافه کنید.',
     startSessionHere: 'شروع جلسه روی این مورد',
 
-    // Journey create modal
-    createJourney: 'سفر جدید',
+    // Thing context create modal
+    createThing context: 'سفر جدید',
     journeyNameLabel: 'نام سفر',
     journeyNamePlaceholder: 'مثلاً: کار تحقیقاتی، یادگیری Python',
     journeyDescLabel: 'توضیح (اختیاری)',
@@ -110,9 +110,9 @@ export const strings = {
     // First run
     firstRunTitle: 'روی چه چیزی کار می‌کنید؟',
     firstRunSubtitle: 'با فوری‌ترین کار شروع کنید. بعداً می‌توانید موارد دیگر اضافه کنید.',
-    firstRunJourneyLabel: 'نام این زمینه',
-    firstRunJourneyPlaceholder: 'مثلاً: تحقیق اینستاگرام، یادگیری پایتون',
-    firstRunJourneyHint: 'این سفر شما می‌شود — ظرف بلندمدت برای کارهای مرتبط.',
+    firstRunThing contextLabel: 'نام این زمینه',
+    firstRunThing contextPlaceholder: 'مثلاً: تحقیق اینستاگرام، یادگیری پایتون',
+    firstRunThing contextHint: 'این سفر شما می‌شود — ظرف بلندمدت برای کارهای مرتبط.',
     firstRunNodeLabel: 'اولین کاری که می‌خواهید انجام دهید',
     firstRunNodePlaceholder: 'مثلاً: تحقیق درباره رقبا، نوشتن مدل دامنه',
     firstRunNodeHint: 'بعد از ورود می‌توانید این را به وظایف کوچک‌تر تقسیم کنید.',

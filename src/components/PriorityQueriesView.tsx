@@ -101,7 +101,7 @@ export const PriorityQueriesView: React.FC<PriorityQueriesViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500">Journey:</span>
+          <span className="text-xs text-stone-500">Context:</span>
           <select
             value={journeyId}
             onChange={(e) => setJourneyId(e.target.value)}
@@ -139,13 +139,13 @@ export const PriorityQueriesView: React.FC<PriorityQueriesViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-stone-200 text-stone-500 uppercase tracking-wider font-semibold text-2xs">
-                    <th className="py-2.5 px-3">Node Name</th>
+                    <th className="py-2.5 px-3">Thing Name</th>
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3">Estimated</th>
                     <th className="py-2.5 px-3">Actual Time</th>
                     <th className="py-2.5 px-3">Estimation Drift</th>
-                    <th className="py-2.5 px-3">Sessions</th>
+                    <th className="py-2.5 px-3">Tracking</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 font-sans">
@@ -212,7 +212,7 @@ export const PriorityQueriesView: React.FC<PriorityQueriesViewProps> = ({
               Query 2: What is my program progress?
             </h3>
             <p className="text-xs text-stone-500 mt-0.5">
-              Prototype Spec v1 · Sessions logged, nodes completed, active projects, discoveries
+              Prototype Spec v1 · Tracking logged, nodes completed, active projects, discoveries
             </p>
           </div>
 
@@ -228,7 +228,7 @@ export const PriorityQueriesView: React.FC<PriorityQueriesViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
                   <span className="text-2xs uppercase tracking-wider text-stone-500 font-semibold block mb-1">
-                    Total Sessions
+                    Total Tracking
                   </span>
                   <div className="text-2xl font-mono font-semibold text-stone-900">
                     {progressResult.total_sessions}

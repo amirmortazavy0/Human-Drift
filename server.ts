@@ -1513,11 +1513,12 @@ async function startServer() {
 
   // Markdown Obsidian / AI-ingestible Export as specified in Master Build Prompt
   app.post('/api/export/markdown', (_req: Request, res: Response) => {
-    const { exec } = require('child_process');
+    const { execFile } = require('child_process');
     const exportScript = path.resolve(process.cwd(), 'export.py');
     const exportDir = path.resolve(process.cwd(), 'export');
+    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
 
-    exec(`python3 "${exportScript}" "${exportDir}"`, (error: any, stdout: string, stderr: string) => {
+    execFile(pythonCommand, [exportScript, exportDir], (error: any, stdout: string, stderr: string) => {
       if (error) {
         console.error('[Export Error]', error, stderr);
         res.status(500).json({ detail: 'Export generation failed', error: String(error) });

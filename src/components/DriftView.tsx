@@ -209,7 +209,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
         </div>
       </div>
 
-      {/* Journey Filter Tabs */}
+      {/* Context filters */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
         <button
           onClick={() => setSelectedJourneyId('ALL')}
@@ -219,7 +219,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
               : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
           }`}
         >
-          All Journeys ({(sessions || []).length})
+          All contexts ({(sessions || []).length})
         </button>
 
         {(journeys || []).map((j) => {
@@ -247,7 +247,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
             <Compass className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-zinc-300">No sessions match current filter</p>
             <p className="text-xs text-zinc-500 mt-1">
-              Start logging your intentions in Log Chat or start an active session in Task View.
+              Start recording Plans and Reality in Log, or start Tracking from Things.
             </p>
           </div>
         ) : (
@@ -307,7 +307,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
                     )}
                     {!item.hasDrift && (
                       <span className="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-800/60 text-emerald-400 text-[10px] flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Intention Maintained
+                        <CheckCircle2 className="w-3 h-3" /> Plan maintained
                       </span>
                     )}
                   </div>
@@ -319,7 +319,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
                   <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/90 space-y-1">
                     <div className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                      <span>Locked Intention</span>
+                      <span>Original Plan</span>
                       <span className="text-zinc-600 text-[10px]">(Immutable)</span>
                     </div>
                     <div className="font-semibold text-zinc-100 text-sm italic">

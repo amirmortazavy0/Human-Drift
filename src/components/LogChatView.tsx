@@ -144,7 +144,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
       });
 
       setSuccessMsg(
-        `Session successfully recorded to human_drift.json! Intention "${proposal.intention}" is now immutable.`
+        `Reality recorded. Plan "${proposal.intention}" is preserved.`
       );
       setProposal(null);
       setInputText('');
@@ -169,7 +169,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div>
           <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
-            <span>Log Chat</span>
+            <span>Log</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-mono font-normal">
               View 1
             </span>
@@ -206,7 +206,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
       {/* Target Journey Picker */}
       <div className="flex items-center gap-2 text-xs bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800">
         <FolderOpen className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-        <span className="text-zinc-400 flex-shrink-0">Active Journey Context:</span>
+        <span className="text-zinc-400 flex-shrink-0">Thing context:</span>
         <select
           value={selectedJourneyId}
           onChange={(e) => setSelectedJourneyId(e.target.value)}
@@ -223,7 +223,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
           )}
         </select>
         <span className="text-zinc-500 ml-auto hidden sm:inline text-[11px]">
-          {(nodes || []).filter((n) => n.journey_id === selectedJourneyId).length} nodes cataloged
+          {(nodes || []).filter((n) => n.journey_id === selectedJourneyId).length} Things available
         </span>
       </div>
 
@@ -314,7 +314,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">Confirmation Card</h3>
                 <p className="text-[11px] text-zinc-400">
-                  Review structured proposal before writing to <code className="font-mono text-zinc-300">human_drift.json</code>
+                  Review the structured proposal before recording it.
                 </p>
               </div>
             </div>

@@ -10,7 +10,7 @@ import { Lang } from '../i18n';
 interface UserGuideViewProps {
   lang: Lang;
   onNavigateTab: (tab: NavTab) => void;
-  onOpenStartSession?: () => void;
+  onOpenStartTracking?: () => void;
 }
 
 // All guide content in both languages
@@ -34,42 +34,42 @@ const content = {
       quote: "You declare what you intend to do. You log what actually happens. The system preserves both — and the gap between them — without ever rewriting history.",
       navTitle: 'Five views in the app',
     },
-    firstJourney: {
+    firstThing context: {
       title: 'Set up your work',
-      body: 'Before you can log a session, you need a Journey and at least one Node inside it.',
+      body: 'Before you can log a session, you need a Thing context and at least one Thing inside it.',
       steps: [
-        { title: 'Create a Journey', body: 'A Journey is the long-lived context — "R&D Work", "Learn Python", "IG Research". Use the Plan tab and the + button in the header to create one.' },
-        { title: 'Add Nodes', body: 'Inside a Journey, create Nodes — projects, tasks, or milestones. Tap + Add item in the Plan view. You can nest them as deep as you need.' },
+        { title: 'Create a Thing context', body: 'A Thing context is the long-lived context — "R&D Work", "Learn Python", "IG Research". Use the Plan tab and the + button in the header to create one.' },
+        { title: 'Add Things', body: 'Inside a Thing context, create Things — projects, tasks, or milestones. Tap + Add item in the Plan view. You can nest them as deep as you need.' },
         { title: 'Set an estimate (optional but valuable)', body: 'If you have a sense of how long a task should take, set an estimate. This is what Queries will compare against your actual time later.' },
       ],
       cta: 'Go to Plan',
     },
-    firstSession: {
+    firstTracking: {
       title: 'Starting a session',
       body: 'A session is a working period. You declare what you intend to do, then reality is logged against that declaration.',
       steps: [
         { title: 'Write your intention', body: 'Be specific. "Work on IG research" is weaker than "Find three competitor accounts and note their posting patterns." Your intention is locked the moment you start.' },
         { title: 'Set your starting condition', body: 'Energy, focus, location, environment — these stay at whatever you set until you change them. Be honest. Low energy is valid data.' },
-        { title: 'Lock and begin', body: 'Tapping "Lock Intention & Start" commits the record. The session clock starts.' },
+        { title: 'Lock and begin', body: 'Tapping "Lock Plan & Start" commits the record. The session clock starts.' },
       ],
       tip: 'Tip: You can start a session from the Plan view by tapping the play icon next to any item.',
       cta: 'Start a session now',
     },
-    duringSession: {
+    duringTracking: {
       title: "While you're working",
-      body: 'The Active Session screen is built for one-tap logging. Just tap what\'s happening.',
+      body: 'The Active Tracking screen is built for one-tap logging. Just tap what\'s happening.',
       actions: [
         { label: 'Start Task',       body: 'When you begin working on a specific node.' },
         { label: 'Complete Task',    body: 'When you finish. The node status updates automatically.' },
         { label: 'Switch Context',   body: 'When you stop one thing and start another without completing it.' },
         { label: 'Log Discovery',    body: "When something new surfaces that you didn't plan. Creates a new node and preserves where the idea came from." },
-        { label: 'Revise Intention', body: 'When your focus genuinely shifts. The original intention stays locked — this adds a revision record.' },
+        { label: 'Revise Plan', body: 'When your focus genuinely shifts. The original Plan is preserved — this adds a revision record.' },
         { label: 'Change Condition', body: 'Tap any condition chip when it changes. It only updates if you tap it.' },
       ],
       gap: 'On gaps: Time between taps is recorded as an unclassified pause — not "wasted time". Just a gap. The system doesn\'t judge it.',
-      cta: 'Go to Active Session',
+      cta: 'Go to Active Tracking',
     },
-    afterSession: {
+    afterTracking: {
       title: 'After a session',
       body: 'When you end a session, you add a reflection, and the data becomes available in History and Queries.',
       steps: [
@@ -83,12 +83,12 @@ const content = {
       title: 'Key concepts',
       subtitle: 'Tap any term to expand it.',
       items: [
-        { term: 'Journey', body: 'A long-lived context that contains all your work in one domain. Sessions belong to exactly one Journey.' },
-        { term: 'Node', body: 'Any unit of work — a project, a task, a milestone, or a note. Nodes live inside Journeys and can be nested freely.' },
-        { term: 'Session', body: 'One working period with a declared intention. The intention is locked at the start.' },
-        { term: 'Intention (immutable)', body: 'The commitment you make at the start of a session. It is written once and never changed. If your focus shifts, you log a Revision — the original stays in the record.' },
+        { term: 'Thing context', body: 'A long-lived context that contains all your work in one domain. Trackings belong to exactly one Thing context.' },
+        { term: 'Thing', body: 'Any unit of work — a project, a task, a milestone, or a note. Things live inside Thing contexts and can be nested freely.' },
+        { term: 'Tracking', body: 'One working period with a declared intention. The intention is locked at the start.' },
+        { term: 'Plan (preserved)', body: 'The commitment you make at the start of a session. It is written once and never changed. If your focus shifts, you log a Revision — the original stays in the record.' },
         { term: 'Condition', body: 'The circumstances at the moment of a tap: energy, focus, location, environment. Sticky — they carry forward until you change them.' },
-        { term: 'Discovery', body: "When something new surfaces mid-session that you didn't plan for. It creates a new Node and records the lineage." },
+        { term: 'Discovery', body: "When something new surfaces mid-session that you didn't plan for. It creates a new Thing and records the lineage." },
         { term: 'Drift', body: 'The gap between what was intended and what actually happened. Drift is information, not failure.' },
         { term: 'Unclassified Context Pause', body: 'Time between taps not attributed to any task. Recorded as a gap interval. The system records it; classification comes later.' },
         { term: 'Append-only audit log', body: 'Every data mutation produces an event record that is never modified or deleted. Corrections add — never overwrite.' },
@@ -114,7 +114,7 @@ const content = {
       quote: 'اعلام می‌کنید چه قصدی دارید. ثبت می‌کنید چه اتفاقی افتاد. سیستم هر دو را — و فاصله بینشان را — بدون هیچ بازنویسی حفظ می‌کند.',
       navTitle: 'پنج بخش اپ',
     },
-    firstJourney: {
+    firstThing context: {
       title: 'راه‌اندازی کار',
       body: 'پیش از ثبت جلسه، به یک سفر و حداقل یک مورد داخل آن نیاز دارید.',
       steps: [
@@ -124,7 +124,7 @@ const content = {
       ],
       cta: 'رفتن به برنامه',
     },
-    firstSession: {
+    firstTracking: {
       title: 'شروع جلسه',
       body: 'جلسه یک دوره کاری است. نیتتان را اعلام می‌کنید، سپس واقعیت در مقابل آن ثبت می‌شود.',
       steps: [
@@ -135,7 +135,7 @@ const content = {
       tip: 'نکته: می‌توانید از بخش برنامه با زدن آیکون پخش کنار هر مورد، جلسه شروع کنید.',
       cta: 'شروع جلسه',
     },
-    duringSession: {
+    duringTracking: {
       title: 'هنگام کار',
       body: 'صفحه جلسه فعال برای ثبت با یک ضربه طراحی شده. فقط چیزی که اتفاق می‌افتد را بزنید.',
       actions: [
@@ -149,7 +149,7 @@ const content = {
       gap: 'درباره فاصله‌ها: زمان بین ضربه‌ها به عنوان توقف طبقه‌بندی نشده ثبت می‌شود — نه "وقت هدر رفته". فقط یک فاصله. سیستم قضاوت نمی‌کند.',
       cta: 'رفتن به جلسه فعال',
     },
-    afterSession: {
+    afterTracking: {
       title: 'بعد از جلسه',
       body: 'وقتی جلسه را پایان می‌دهید، تأمل می‌نویسید و داده در تاریخچه و پرس‌وجو در دسترس می‌شود.',
       steps: [
@@ -163,9 +163,9 @@ const content = {
       title: 'مفاهیم کلیدی',
       subtitle: 'روی هر واژه بزنید تا باز شود.',
       items: [
-        { term: 'سفر (Journey)', body: 'زمینه‌ای بلندمدت که همه کارهای یک حوزه را در بر می‌گیرد. جلسات دقیقاً به یک سفر تعلق دارند.' },
-        { term: 'مورد (Node)', body: 'هر واحد کاری — پروژه، وظیفه، نقطه عطف یا یادداشت. داخل سفرها قرار می‌گیرند و می‌توانند تو در تو باشند.' },
-        { term: 'جلسه (Session)', body: 'یک دوره کاری با نیت اعلام‌شده. نیت از ابتدا قفل می‌شود.' },
+        { term: 'سفر (Thing context)', body: 'زمینه‌ای بلندمدت که همه کارهای یک حوزه را در بر می‌گیرد. جلسات دقیقاً به یک سفر تعلق دارند.' },
+        { term: 'مورد (Thing)', body: 'هر واحد کاری — پروژه، وظیفه، نقطه عطف یا یادداشت. داخل سفرها قرار می‌گیرند و می‌توانند تو در تو باشند.' },
+        { term: 'جلسه (Tracking)', body: 'یک دوره کاری با نیت اعلام‌شده. نیت از ابتدا قفل می‌شود.' },
         { term: 'نیت (غیرقابل تغییر)', body: 'تعهدی که در ابتدای جلسه می‌دهید. یک بار نوشته می‌شود و هرگز تغییر نمی‌کند. اگر تمرکزتان عوض شد، تجدیدنظر ثبت می‌کنید — اصلی می‌ماند.' },
         { term: 'شرایط (Condition)', body: 'اوضاع لحظه ضربه: انرژی، تمرکز، مکان، محیط. چسبنده است — تا تغییرش ندهید همانطور می‌ماند.' },
         { term: 'کشف (Discovery)', body: 'وقتی در میان جلسه چیز برنامه‌ریزی نشده‌ای ظاهر می‌شود. یک مورد جدید می‌سازد و ریشه‌اش را حفظ می‌کند.' },
@@ -193,7 +193,7 @@ const Concept: React.FC<ConceptProps> = ({ term, body }) => {
   );
 };
 
-interface NavCardProps { icon: React.ReactNode; label: string; description: string; tab: NavTab; onNavigate: (tab: NavTab) => void }
+interface NavCardProps { icon: React.ReactThing; label: string; description: string; tab: NavTab; onNavigate: (tab: NavTab) => void }
 const NavCard: React.FC<NavCardProps> = ({ icon, label, description, tab, onNavigate }) => (
   <button onClick={() => onNavigate(tab)} className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 bg-white hover:border-stone-400 transition-all text-left w-full cursor-pointer group">
     <div className="p-2 rounded-lg bg-stone-100 text-stone-700 group-hover:bg-stone-900 group-hover:text-white transition-colors shrink-0">{icon}</div>
@@ -214,22 +214,22 @@ const actionIcons = [
   <Eye className="w-3.5 h-3.5" />,
 ];
 
-export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTab, onOpenStartSession }) => {
+export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTab, onOpenStartTracking }) => {
   const [step, setStep] = useState<StepId>('WHERE_AM_I');
   const c = content[lang];
   const steps = c.steps;
   const currentIndex = steps.findIndex(s => s.id === step);
 
   const navLabels: Record<NavTab, string> = {
-    LOG:       lang === 'fa' ? 'چت لاگ' : 'Log Chat',
-    QUERY:     lang === 'fa' ? 'چت پرسش' : 'Query Chat',
-    TASKS:     lang === 'fa' ? 'وظایف' : 'Task View',
-    DRIFT:     lang === 'fa' ? 'دریفت' : 'Drift View',
+    LOG:       lang === 'fa' ? 'چت لاگ' : 'Log',
+    QUERY:     lang === 'fa' ? 'چت پرسش' : 'Ask',
+    TASKS:     lang === 'fa' ? 'وظایف' : 'Things',
+    DRIFT:     lang === 'fa' ? 'دریفت' : 'Drift',
     BOARD:     lang === 'fa' ? 'بُرد' : 'Board',
     FAST_LOG:  lang === 'fa' ? 'ثبت سریع' : 'Quick Log',
     GUIDE:     lang === 'fa' ? 'راهنما' : 'Guide',
     HIERARCHY: lang === 'fa' ? 'برنامه' : 'Plan',
-    SESSION:   lang === 'fa' ? 'جلسه'  : 'Session',
+    SESSION:   lang === 'fa' ? 'جلسه'  : 'Tracking',
     HISTORY:   lang === 'fa' ? 'تاریخچه' : 'History',
     QUERIES:   lang === 'fa' ? 'پرس‌وجو' : 'Queries',
     AUDIT:     lang === 'fa' ? 'گزارش' : 'Audit',
@@ -284,7 +284,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
           </div>
         </>); })()}
 
-        {step === 'FIRST_JOURNEY' && (() => { const d = c.firstJourney; return (<>
+        {step === 'FIRST_JOURNEY' && (() => { const d = c.firstThing context; return (<>
           <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
           <div className="space-y-3">
             {d.steps.map((s, i) => (
@@ -299,7 +299,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
           </button>
         </>); })()}
 
-        {step === 'FIRST_SESSION' && (() => { const d = c.firstSession; return (<>
+        {step === 'FIRST_SESSION' && (() => { const d = c.firstTracking; return (<>
           <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
           <div className="space-y-3">
             {d.steps.map((s, i) => (
@@ -310,12 +310,12 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
             ))}
           </div>
           <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50 text-2xs text-stone-600 leading-relaxed">{d.tip}</div>
-          <button onClick={() => { if (onOpenStartSession) onOpenStartSession(); else onNavigateTab('SESSION'); }} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+          <button onClick={() => { if (onOpenStartTracking) onOpenStartTracking(); else onNavigateTab('SESSION'); }} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
             <Play className="w-3.5 h-3.5 fill-current" /><span>{d.cta}</span>
           </button>
         </>); })()}
 
-        {step === 'DURING_SESSION' && (() => { const d = c.duringSession; return (<>
+        {step === 'DURING_SESSION' && (() => { const d = c.duringTracking; return (<>
           <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
           <div className="space-y-2">
             {d.actions.map((a, i) => (
@@ -331,7 +331,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
           </button>
         </>); })()}
 
-        {step === 'AFTER_SESSION' && (() => { const d = c.afterSession; return (<>
+        {step === 'AFTER_SESSION' && (() => { const d = c.afterTracking; return (<>
           <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
           <div className="space-y-3">
             {d.steps.map((s, i) => (

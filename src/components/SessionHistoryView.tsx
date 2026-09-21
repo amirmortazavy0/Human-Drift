@@ -83,20 +83,20 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
       <div className="bg-white border border-stone-200 rounded-xl p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-stone-100">
           <div>
-            <h3 className="text-base font-semibold text-stone-900">Session History</h3>
+            <h3 className="text-base font-semibold text-stone-900">Tracking History</h3>
             <p className="text-xs text-stone-500">
               Historical record of working sessions and reality logged
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500">Filter Journey:</span>
+            <span className="text-xs text-stone-500">Filter context:</span>
             <select
               value={filterJourneyId}
               onChange={(e) => setFilterJourneyId(e.target.value)}
               className="py-1 px-2.5 text-xs bg-stone-50 border border-stone-300 rounded-lg text-stone-800"
             >
-              <option value="ALL">All Journeys</option>
+              <option value="ALL">All contexts</option>
               {journeys.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.name}
@@ -222,7 +222,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
             <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-stone-900">Session Evidence Detail</h3>
+                  <h3 className="text-base font-semibold text-stone-900">Tracking Evidence Detail</h3>
                   <span
                     className={`text-2xs font-semibold px-2 py-0.5 rounded-md font-mono ${
                       selectedSession.status === 'COMPLETE'
@@ -251,7 +251,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
               <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
                 <div className="flex items-center gap-2 text-stone-600 text-xs font-semibold uppercase tracking-wider">
                   <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Original Locked Intention (Immutable)</span>
+                  <span>Original Plan (preserved)</span>
                 </div>
                 <p className="text-base font-serif text-stone-900">
                   "{selectedSession.intention}"
@@ -264,7 +264,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                 selectedSession.end_reason === 'JOURNEY_SWITCH') && (
                 <div className="p-3.5 bg-purple-50/80 rounded-xl border border-purple-200 space-y-1.5 text-xs text-purple-900">
                   <div className="font-semibold flex items-center gap-1.5 text-purple-800">
-                    <span>Cross-Journey Transition (AD-002 Decision 2)</span>
+                    <span>Context transition</span>
                   </div>
                   {selectedSession.predecessor_session_id && (
                     <div className="font-mono text-2xs">
@@ -280,7 +280,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                   )}
                   {selectedSession.end_reason === 'JOURNEY_SWITCH' && (
                     <div className="text-2xs text-purple-700">
-                      Reason: Session concluded via Journey Switch to preserve single-journey structural integrity.
+                      Reason: Session concluded via Context switch to preserve single-journey structural integrity.
                     </div>
                   )}
                 </div>
@@ -456,7 +456,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                             <div className="text-2xs text-purple-800 bg-purple-50 px-2 py-1 rounded border border-purple-200 flex items-center gap-1">
                               <Lightbulb className="w-3 h-3 text-purple-600" />
                               <span>
-                                Created Discovery Node: <strong>{discoveryNode.name}</strong>
+                                Created Discovery Thing: <strong>{discoveryNode.name}</strong>
                               </span>
                             </div>
                           )}

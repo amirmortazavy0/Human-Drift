@@ -61,7 +61,7 @@ export const OllamaSettingsModal: React.FC<OllamaSettingsModalProps> = ({
           </div>
           <div>
             <h3 className="font-semibold text-zinc-100 text-base">Ollama AI Configuration</h3>
-            <p className="text-xs text-zinc-400">Local & Pluggable Intention Engine</p>
+            <p className="text-xs text-zinc-400">Local AI provider</p>
           </div>
         </div>
 

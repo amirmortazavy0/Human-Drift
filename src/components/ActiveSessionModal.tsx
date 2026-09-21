@@ -101,14 +101,14 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>Active Session</span>
+            <span>Active Tracking</span>
             <span className="text-zinc-500">• {journey?.name}</span>
           </div>
           <h3 className="text-base font-bold text-zinc-100">
             "{session.intention}"
           </h3>
           <p className="text-[11px] text-zinc-400">
-            Intention locked at {session.started_at?.substring(11, 16)}.
+            Original Plan set at {session.started_at?.substring(11, 16)}.
           </p>
         </div>
 
@@ -143,7 +143,15 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
                     }`}
                   >
-                    {t}
+                    {({
+                      TASK_STARTED: 'Started',
+                      CONTEXT_SWITCH: 'Context changed',
+                      DISCOVERY: 'Discovery',
+                      INTENTION_REVISED: 'Plan revised',
+                      NOTE: 'Note',
+                      TASK_PAUSED: 'Paused',
+                      TASK_COMPLETED: 'Completed',
+                    } as Partial<Record<EntryType, string>>)[t] || t}
                   </button>
                 ))}
               </div>
@@ -175,7 +183,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
           <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-3 animate-fade-in">
             <h4 className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
               <Square className="w-3.5 h-3.5 text-rose-400" />
-              <span>Conclude Session</span>
+              <span>Conclude Tracking</span>
             </h4>
 
             <div>
@@ -238,7 +246,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
               className="px-3 py-1.5 bg-rose-950/80 border border-rose-800 text-rose-300 hover:bg-rose-900 rounded-lg flex items-center gap-1.5 font-medium"
             >
               <Square className="w-3.5 h-3.5" />
-              <span>Complete Session</span>
+              <span>Complete Tracking</span>
             </button>
           </div>
         )}

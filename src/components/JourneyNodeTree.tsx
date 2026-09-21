@@ -45,7 +45,7 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
   const [editingEstimateNode, setEditingEstimateNode] = useState<Node | null>(null);
   const [newEstimateValue, setNewEstimateValue] = useState<string>('');
 
-  // Close Node Modal State
+  // Close Thing Modal State
   const [closingNode, setClosingNode] = useState<Node | null>(null);
   const [closeReason, setCloseReason] = useState<string>('');
 
@@ -241,7 +241,7 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
             {onStartSessionWithNode && node.status !== 'COMPLETE' && (
               <button
                 onClick={() => onStartSessionWithNode(node)}
-                title="Start Session focusing on this Node"
+                title="Start Tracking on this Thing"
                 className="hidden sm:inline-flex items-center gap-1 text-2xs font-medium px-2 py-1 bg-stone-100 hover:bg-stone-900 hover:text-white rounded-md transition-colors"
               >
                 <span>Work</span>
@@ -309,7 +309,7 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
                     className="w-full text-left px-3 py-1.5 hover:bg-red-50 text-red-700 flex items-center gap-2"
                   >
                     <XCircle className="w-3.5 h-3.5" />
-                    <span>Close Node (with Reason)</span>
+                    <span>Close Thing (with Reason)</span>
                   </button>
                 </div>
               )}
@@ -348,14 +348,14 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-medium transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Add Root Node</span>
+          <span>Add Thing</span>
         </button>
       </div>
 
       {rootNodes.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-stone-200 rounded-lg">
           <Folder className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-          <p className="text-sm text-stone-600 font-medium">No nodes created yet in this Journey.</p>
+          <p className="text-sm text-stone-600 font-medium">No Things created yet in this context.</p>
           <p className="text-xs text-stone-400 mt-1 mb-4">
             Add a project, task, or milestone to begin structuring reality.
           </p>
@@ -377,12 +377,12 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-stone-200 rounded-xl shadow-xl p-6">
             <h3 className="text-base font-semibold text-stone-900 mb-1">
-              {selectedParentId ? 'Add Child Node' : 'Add Root Node'}
+              {selectedParentId ? 'Add Child Node' : 'Add Thing'}
             </h3>
             <p className="text-xs text-stone-500 mb-4">
               {selectedParentId
                 ? `Under parent: ${nodes.find((n) => n.id === selectedParentId)?.name}`
-                : `Top-level unit of work in Journey "${journey.name}"`}
+                : `Top-level Thing in context "${journey.name}"`}
             </p>
 
             <form onSubmit={handleCreateNode} className="space-y-3.5">
@@ -472,7 +472,7 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
           <div className="w-full max-w-sm bg-white border border-stone-200 rounded-xl shadow-xl p-5">
             <h4 className="text-sm font-semibold text-stone-900 mb-1">Set / Revise Estimate</h4>
             <p className="text-xs text-stone-500 mb-3">
-              Node: <span className="font-medium text-stone-800">{editingEstimateNode.name}</span>
+              Thing: <span className="font-medium text-stone-800">{editingEstimateNode.name}</span>
             </p>
 
             <form onSubmit={handleSaveEstimate} className="space-y-3">
@@ -511,13 +511,13 @@ export const JourneyNodeTree: React.FC<JourneyNodeTreeProps> = ({
         </div>
       )}
 
-      {/* Close Node with Reason Modal (Domain Model v1 Rule) */}
+      {/* Close Thing with Reason Modal (Domain Model v1 Rule) */}
       {closingNode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-stone-200 rounded-xl shadow-xl p-5">
             <div className="flex items-center gap-2 text-red-700 font-medium text-sm mb-1">
               <XCircle className="w-4 h-4" />
-              <span>Close Node</span>
+              <span>Close Thing</span>
             </div>
             <p className="text-xs text-stone-500 mb-3">
               Domain Model v1: There is no ABANDONED state. Explicitly ending a node requires an

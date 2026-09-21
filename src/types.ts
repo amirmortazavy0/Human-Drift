@@ -184,7 +184,7 @@ export interface JourneyProgressResult {
 
 // Four Canonical Views
 export type NavTab =
-  | 'LOG' // 1. Log Chat
+  | 'LOG' // 1. Log
   | 'QUERY' // 2. Query Chat
   | 'TASKS' // 3. Task View
   | 'DRIFT' // 4. Drift View
@@ -227,6 +227,12 @@ export interface BoardNodeItem {
     intention: string;
     duration_minutes: number;
     logged_at: string;
+  }>;
+  recent_logs: Array<{
+    id: string;
+    logged_at: string;
+    entry_type: string;
+    note: string | null;
   }>;
 }
 

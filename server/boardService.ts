@@ -17,6 +17,12 @@ export interface BoardNodeItem {
     duration_minutes: number;
     logged_at: string;
   }>;
+  recent_logs: Array<{
+    id: string;
+    logged_at: string;
+    entry_type: string;
+    note: string | null;
+  }>;
 }
 
 export interface BoardData {
@@ -77,6 +83,12 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
     // Sum duration across sessions associated with this node
     let totalMinutes = 0;
     const recentSessions: BoardNodeItem['recent_sessions'] = [];
+    const recentLogs: BoardNodeItem['recent_logs'] = nodeEntries.slice(0, 5).map((entry) => ({
+      id: entry.id,
+      logged_at: entry.logged_at,
+      entry_type: entry.entry_type,
+      note: entry.note || null,
+    }));
 
     const seenSessions = new Set<string>();
     for (const entry of nodeEntries) {
@@ -111,6 +123,7 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
       session_count: sessionIds.size,
       last_activity_at: nodeEntries[0]?.logged_at || node.created_at,
       recent_sessions: recentSessions,
+      recent_logs: recentLogs,
     };
   });
 
