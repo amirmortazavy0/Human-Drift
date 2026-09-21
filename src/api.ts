@@ -112,6 +112,7 @@ export async function createJourney(payload: {
   name: string;
   description?: string | null;
   visibility?: 'PRIVATE' | 'SHARED';
+  status?: string;
 }): Promise<Journey> {
   const res = await apiFetch(`${API_BASE}/journeys`, {
     method: 'POST',
@@ -565,4 +566,18 @@ export async function triggerMarkdownExport(): Promise<{
   }
   return res.json();
 }
+
+// --- Board View ---
+export async function getBoardData(journeyId?: string): Promise<BoardData> {
+  const url = journeyId && journeyId !== 'ALL'
+    ? `${API_BASE}/board/${encodeURIComponent(journeyId)}`
+    : `${API_BASE}/board`;
+  const res = await apiFetch(url);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to fetch board data');
+  }
+  return res.json();
+}
+
 

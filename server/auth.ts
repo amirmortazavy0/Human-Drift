@@ -240,6 +240,7 @@ export function expressAuthMiddleware(
     '/api/auth/signup',
     '/api/auth/login',
     '/api/health',
+    '/health',
   ];
 
   if (publicPaths.includes(path) || req.method === 'OPTIONS') {

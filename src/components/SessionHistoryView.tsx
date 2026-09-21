@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -11,23 +11,32 @@ import {
   Lightbulb,
   CheckCircle2,
   AlertTriangle,
+  FolderOpen,
 } from 'lucide-react';
 import { Journey, Node, Session, SessionEntry } from '../types';
 import { getCorrections, getSessionEntries, getSessionSummary } from '../api';
 import { CorrectionModal } from './CorrectionModal';
+import {
+  formatEntryType,
+  formatLocalDateTime,
+  formatLocalTime,
+  formatMinutes,
+} from '../utils/formatters';
 
 interface SessionHistoryViewProps {
   sessions?: Session[];
   journeys?: Journey[];
   nodes?: Node[];
   onRefresh?: () => Promise<void>;
+  onOpenRetrospectiveModal?: () => void;
 }
 
 export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
   sessions = [],
   journeys = [],
   nodes = [],
-  onRefresh,
+  onRefresh = async () => {},
+  onOpenRetrospectiveModal,
 }) => {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionEntries, setSessionEntries] = useState<SessionEntry[]>([]);
@@ -63,55 +72,67 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
     }
   };
 
-  const getQualityColor = (quality?: string | null) => {
+  const getQualityBadge = (quality?: string | null) => {
     switch (quality) {
-      case 'EXCELLENT':
-        return 'text-emerald-700 bg-emerald-50 border-emerald-200';
       case 'GOOD':
-        return 'text-sky-700 bg-sky-50 border-sky-200';
-      case 'FAIR':
-        return 'text-amber-700 bg-amber-50 border-amber-200';
+        return 'text-emerald-300 bg-emerald-950/60 border-emerald-800';
+      case 'NORMAL':
+        return 'text-sky-300 bg-sky-950/60 border-sky-800';
       case 'POOR':
-        return 'text-red-700 bg-red-50 border-red-200';
+        return 'text-rose-300 bg-rose-950/60 border-rose-800';
       default:
-        return 'text-stone-600 bg-stone-50 border-stone-200';
+        return null;
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white border border-stone-200 rounded-xl p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-stone-100">
+    <div className="space-y-4 pb-16">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-semibold text-stone-900">Session History</h3>
-            <p className="text-xs text-stone-500">
-              Historical record of working sessions and reality logged
+            <h3 className="text-base font-semibold text-zinc-100">Audit Trail & History</h3>
+            <p className="text-xs text-zinc-400">
+              Chronological log of working sessions and reality as recorded
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500">Filter Journey:</span>
-            <select
-              value={filterJourneyId}
-              onChange={(e) => setFilterJourneyId(e.target.value)}
-              className="py-1 px-2.5 text-xs bg-stone-50 border border-stone-300 rounded-lg text-stone-800"
-            >
-              <option value="ALL">All Journeys</option>
-              {journeys.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.name}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-xs text-zinc-400">Filter Thing:</span>
+              <select
+                value={filterJourneyId}
+                onChange={(e) => setFilterJourneyId(e.target.value)}
+                className="py-1 px-3 text-xs bg-zinc-950 border border-zinc-700 rounded-xl text-zinc-200 focus:outline-none focus:border-amber-500"
+              >
+                <option value="ALL">All Things ({journeys.length})</option>
+                {journeys.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {onOpenRetrospectiveModal && (
+              <button
+                type="button"
+                onClick={onOpenRetrospectiveModal}
+                className="flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs rounded-xl font-medium transition cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>+ Log Past Work</span>
+              </button>
+            )}
           </div>
         </div>
 
         {filteredSessions.length === 0 ? (
-          <div className="text-center py-10 text-stone-400 text-xs">
-            No sessions recorded yet. Start a session to log intention and reality.
+          <div className="text-center py-12 text-zinc-500 text-xs">
+            No sessions recorded yet. Start tracking or use Quick Log to capture work.
           </div>
         ) : (
-          <div className="divide-y divide-stone-100">
+          <div className="divide-y divide-zinc-800/60">
             {filteredSessions.map((session) => {
               const journey = journeys.find((j) => j.id === session.journey_id);
               const start = new Date(session.started_at);
@@ -125,75 +146,56 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                 <div
                   key={session.id}
                   onClick={() => openSessionDetail(session)}
-                  className="py-3 px-3 hover:bg-stone-50 rounded-lg cursor-pointer transition-colors flex items-center justify-between gap-3 group"
+                  className="py-3 px-3 hover:bg-zinc-800/40 rounded-xl cursor-pointer transition-colors flex items-center justify-between gap-3 group"
                 >
                   <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-stone-900">
-                        {start.toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      <span className="font-semibold text-zinc-200">
+                        {formatLocalDateTime(session.started_at)}
                       </span>
 
-                      <span className="text-2xs font-mono text-stone-500">
-                        {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-
+                      {/* Explicit Thing Attribution */}
                       {journey && (
-                        <span className="text-2xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
-                          {journey.name}
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 font-medium">
+                          Thing: {journey.name}
                         </span>
                       )}
 
                       <span
-                        className={`text-2xs font-semibold px-2 py-0.5 rounded-md font-mono ${
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md font-mono ${
                           session.status === 'COMPLETE'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                             : session.status === 'ACTIVE'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-stone-200 text-stone-700'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                            : 'bg-zinc-800 text-zinc-400'
                         }`}
                       >
                         {session.status}
                       </span>
 
                       {session.end_reason === 'JOURNEY_SWITCH' && (
-                        <span className="text-2xs font-semibold px-2 py-0.5 rounded-md font-mono bg-purple-100 text-purple-800 border border-purple-200">
-                          JOURNEY_SWITCH
-                        </span>
-                      )}
-
-                      {session.predecessor_session_id && (
-                        <span className="text-2xs font-mono px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200" title={`Predecessor: ${session.predecessor_session_id}`}>
-                          ↰ Continued
-                        </span>
-                      )}
-
-                      {session.successor_session_id && (
-                        <span className="text-2xs font-mono px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200" title={`Successor: ${session.successor_session_id}`}>
-                          ↳ Transitioned
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-purple-950/60 text-purple-300 border border-purple-800">
+                          Transitioned
                         </span>
                       )}
 
                       {session.quality && (
                         <span
-                          className={`text-2xs font-medium px-2 py-0.5 rounded-md border ${getQualityColor(
-                            session.quality
-                          )}`}
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
+                            getQualityBadge(session.quality) || ''
+                          }`}
                         >
                           {session.quality}
                         </span>
                       )}
                     </div>
 
-                    <div className="text-sm font-serif text-stone-800 truncate">
+                    <div className="text-sm text-zinc-100 font-medium truncate">
                       "{session.intention}"
                     </div>
 
                     {session.reflection && (
-                      <div className="text-xs text-stone-500 truncate italic">
+                      <div className="text-xs text-zinc-400 truncate italic">
                         Reflection: {session.reflection}
                       </div>
                     )}
@@ -201,12 +203,12 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
 
                   <div className="flex items-center gap-3 shrink-0">
                     {durationMins !== null && (
-                      <span className="text-xs font-mono text-stone-600 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-stone-400" />
+                      <span className="text-xs font-mono text-zinc-400 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
                         {durationMins}m
                       </span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
                   </div>
                 </div>
               );
@@ -217,185 +219,115 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
 
       {/* Session Detail Modal */}
       {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl bg-white border border-stone-200 rounded-xl shadow-2xl overflow-hidden my-6">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-6">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-950/50">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-stone-900">Session Evidence Detail</h3>
+                  <h3 className="text-base font-semibold text-zinc-100">Session Evidence Detail</h3>
                   <span
-                    className={`text-2xs font-semibold px-2 py-0.5 rounded-md font-mono ${
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-md font-mono ${
                       selectedSession.status === 'COMPLETE'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
                     }`}
                   >
                     {selectedSession.status}
                   </span>
                 </div>
-                <p className="text-xs text-stone-500 font-mono mt-0.5">
-                  ID: {selectedSession.id} ·{' '}
-                  {new Date(selectedSession.started_at).toLocaleString()}
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                  ID: {selectedSession.id} · {formatLocalDateTime(selectedSession.started_at)}
                 </p>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedSession(null)}
-                className="p-1 rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-200/50"
+                className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-xl transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-              {/* Intention Section */}
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
-                <div className="flex items-center gap-2 text-stone-600 text-xs font-semibold uppercase tracking-wider">
-                  <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Original Locked Intention (Immutable)</span>
+            <div className="p-6 space-y-5 max-h-[calc(85vh-80px)] overflow-y-auto">
+              {/* Intention statement */}
+              <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    Intention (Immutable Record)
+                  </span>
+                  <span className="text-zinc-400 font-semibold">
+                    Thing: {journeys.find((j) => j.id === selectedSession.journey_id)?.name || 'Unknown'}
+                  </span>
                 </div>
-                <p className="text-base font-serif text-stone-900">
+                <p className="text-sm font-semibold text-zinc-100 pt-1">
                   "{selectedSession.intention}"
                 </p>
               </div>
 
-              {/* Linked Journey Transitions (Decision 2) */}
-              {(selectedSession.predecessor_session_id ||
-                selectedSession.successor_session_id ||
-                selectedSession.end_reason === 'JOURNEY_SWITCH') && (
-                <div className="p-3.5 bg-purple-50/80 rounded-xl border border-purple-200 space-y-1.5 text-xs text-purple-900">
-                  <div className="font-semibold flex items-center gap-1.5 text-purple-800">
-                    <span>Cross-Journey Transition (AD-002 Decision 2)</span>
-                  </div>
-                  {selectedSession.predecessor_session_id && (
-                    <div className="font-mono text-2xs">
-                      ↰ Continued from predecessor session:{' '}
-                      <span className="font-semibold">{selectedSession.predecessor_session_id}</span>
-                    </div>
-                  )}
-                  {selectedSession.successor_session_id && (
-                    <div className="font-mono text-2xs">
-                      ↳ Transitioned into successor session:{' '}
-                      <span className="font-semibold">{selectedSession.successor_session_id}</span>
-                    </div>
-                  )}
-                  {selectedSession.end_reason === 'JOURNEY_SWITCH' && (
-                    <div className="text-2xs text-purple-700">
-                      Reason: Session concluded via Journey Switch to preserve single-journey structural integrity.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Calculated Metrics Summary (Decision 1: Active Work vs Unclassified Pause) */}
+              {/* Summary Stats */}
               {sessionSummary && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
-                      <span className="text-2xs uppercase text-stone-500 font-medium block">
-                        Active Work
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
+                      <span className="text-[10px] uppercase text-zinc-500 font-medium block">
+                        Active Time
                       </span>
-                      <span className="text-base font-semibold font-mono text-emerald-700">
+                      <span className="text-base font-semibold font-mono text-emerald-400">
                         {sessionSummary.activeMinutes}m
                       </span>
-                      <span className="text-3xs text-stone-400 block mt-0.5 font-mono">
-                        Σ(started → paused/done)
-                      </span>
                     </div>
 
-                    <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
-                      <span className="text-2xs uppercase text-stone-500 font-medium block">
-                        Unclassified Pause
+                    <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
+                      <span className="text-[10px] uppercase text-zinc-500 font-medium block">
+                        Pauses
                       </span>
-                      <span className="text-base font-semibold font-mono text-amber-700">
+                      <span className="text-base font-semibold font-mono text-amber-400">
                         {sessionSummary.unclassifiedPauseMinutes}m
                       </span>
-                      <span className="text-3xs text-stone-400 block mt-0.5 font-mono">
-                        first-class intervals
-                      </span>
                     </div>
 
-                    <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
-                      <span className="text-2xs uppercase text-stone-500 font-medium block">
-                        Session Elapsed
+                    <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
+                      <span className="text-[10px] uppercase text-zinc-500 font-medium block">
+                        Elapsed
                       </span>
-                      <span className="text-base font-semibold font-mono text-stone-900">
+                      <span className="text-base font-semibold font-mono text-zinc-100">
                         {sessionSummary.sessionDurationMinutes}m
                       </span>
-                      <span className="text-3xs text-stone-400 block mt-0.5 font-mono">
-                        active + pauses
-                      </span>
                     </div>
 
-                    <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
-                      <span className="text-2xs uppercase text-stone-500 font-medium block">
+                    <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
+                      <span className="text-[10px] uppercase text-zinc-500 font-medium block">
                         Discoveries
                       </span>
-                      <span className="text-base font-semibold font-mono text-purple-700">
+                      <span className="text-base font-semibold font-mono text-purple-400">
                         {sessionSummary.discoveriesCount}
-                      </span>
-                      <span className="text-3xs text-stone-400 block mt-0.5 font-mono">
-                        lineage nodes created
                       </span>
                     </div>
                   </div>
-
-                  {/* Decision 1: First-Class Pause Intervals Breakdown */}
-                  {sessionSummary.pauseIntervals && sessionSummary.pauseIntervals.length > 0 && (
-                    <div className="p-3.5 bg-stone-50 rounded-lg border border-stone-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-stone-700 uppercase tracking-wider">
-                          Unclassified Context Pauses ({sessionSummary.pauseIntervals.length})
-                        </span>
-                        <span className="text-2xs font-mono text-stone-500">
-                          Total: {sessionSummary.unclassifiedPauseMinutes}m
-                        </span>
-                      </div>
-                      <p className="text-2xs text-stone-500 font-serif">
-                        Recorded fact without speculative categorization ("overhead", "interruption", or "slack").
-                      </p>
-                      <div className="divide-y divide-stone-200 border border-stone-200 rounded-md bg-white overflow-hidden text-2xs font-mono">
-                        {sessionSummary.pauseIntervals.map((interval: any, idx: number) => (
-                          <div key={idx} className="p-2 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-amber-700 font-semibold">
-                                {interval.classification}
-                              </span>
-                              <span className="text-stone-400">·</span>
-                              <span className="text-stone-600">
-                                {new Date(interval.start).toLocaleTimeString()} →{' '}
-                                {new Date(interval.end).toLocaleTimeString()}
-                              </span>
-                            </div>
-                            <span className="font-semibold text-stone-800">
-                              {interval.duration_minutes}m
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Reflection & Quality */}
               {(selectedSession.reflection || selectedSession.quality) && (
-                <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase text-stone-600">
+                    <span className="text-xs font-semibold text-zinc-300">
                       Session Reflection
                     </span>
                     {selectedSession.quality && (
                       <span
-                        className={`text-2xs font-semibold px-2 py-0.5 rounded-md border ${getQualityColor(
-                          selectedSession.quality
-                        )}`}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                          getQualityBadge(selectedSession.quality) || ''
+                        }`}
                       >
                         Quality: {selectedSession.quality}
                       </span>
                     )}
                   </div>
                   {selectedSession.reflection && (
-                    <p className="text-sm font-serif text-stone-800 leading-relaxed">
+                    <p className="text-xs text-zinc-200 leading-relaxed">
                       {selectedSession.reflection}
                     </p>
                   )}
@@ -404,12 +336,12 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
 
               {/* Entry Stream */}
               <div>
-                <h4 className="text-xs font-semibold uppercase text-stone-600 tracking-wider mb-2.5">
+                <h4 className="text-xs font-semibold text-zinc-300 tracking-wider mb-2.5">
                   Chronological Entry Stream ({sessionEntries.length})
                 </h4>
 
                 {loadingDetail ? (
-                  <div className="text-center py-4 text-xs text-stone-400">Loading entries...</div>
+                  <div className="text-center py-4 text-xs text-zinc-500">Loading entries...</div>
                 ) : (
                   <div className="space-y-2">
                     {sessionEntries.map((entry) => {
@@ -422,26 +354,27 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                       return (
                         <div
                           key={entry.id}
-                          className="p-3 bg-stone-50 border border-stone-200 rounded-lg space-y-1.5"
+                          className="p-3 bg-zinc-950 border border-zinc-800 rounded-xl space-y-1.5 text-xs"
                         >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-2xs text-stone-500">
-                                {new Date(entry.logged_at).toLocaleTimeString()}
+                              <span className="font-mono text-[11px] text-zinc-400">
+                                {formatLocalTime(entry.logged_at)}
                               </span>
-                              <span className="text-2xs font-mono font-semibold px-2 py-0.5 rounded-md bg-stone-200 text-stone-800">
-                                {entry.entry_type}
+                              {/* PRODUCT FRIENDLY ENTRY TYPE (NOT RAW TASK_STARTED) */}
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                {formatEntryType(entry.entry_type)}
                               </span>
                               {node && (
-                                <span className="text-xs font-medium text-stone-900">
-                                  {node.name}
+                                <span className="text-xs font-medium text-zinc-200">
+                                  Task: {node.name}
                                 </span>
                               )}
                             </div>
 
                             <button
                               onClick={() => setCorrectingEntry(entry)}
-                              className="text-2xs text-stone-500 hover:text-stone-900 flex items-center gap-1"
+                              className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 cursor-pointer"
                             >
                               <History className="w-3 h-3" />
                               <span>Correct</span>
@@ -449,37 +382,39 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                           </div>
 
                           {entry.note && (
-                            <p className="text-xs text-stone-700 font-serif">{entry.note}</p>
+                            <p className="text-xs text-zinc-300">{entry.note}</p>
                           )}
 
                           {discoveryNode && (
-                            <div className="text-2xs text-purple-800 bg-purple-50 px-2 py-1 rounded border border-purple-200 flex items-center gap-1">
-                              <Lightbulb className="w-3 h-3 text-purple-600" />
+                            <div className="text-[11px] text-purple-300 bg-purple-950/60 px-2 py-1 rounded border border-purple-800 flex items-center gap-1">
+                              <Lightbulb className="w-3 h-3 text-purple-400" />
                               <span>
-                                Created Discovery Node: <strong>{discoveryNode.name}</strong>
+                                Created Discovery: <strong>{discoveryNode.name}</strong>
                               </span>
                             </div>
                           )}
 
                           {/* Condition Snapshot */}
-                          <div className="flex items-center gap-2 text-2xs text-stone-500 font-mono pt-1">
-                            <span>⚡ {entry.condition.energy}</span>
-                            <span>🎯 {entry.condition.focus}</span>
-                            <span>📍 {entry.condition.location}</span>
-                            <span>🔊 {entry.condition.environment}</span>
-                          </div>
+                          {entry.condition && (
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono pt-1">
+                              <span>⚡ {entry.condition.energy}</span>
+                              <span>🎯 {entry.condition.focus}</span>
+                              <span>📍 {entry.condition.location}</span>
+                              <span>🔊 {entry.condition.environment}</span>
+                            </div>
+                          )}
 
                           {/* Applied Corrections */}
                           {entryCorrections.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-stone-200/80 space-y-1">
-                              <div className="text-2xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1">
+                            <div className="mt-2 pt-2 border-t border-zinc-800 space-y-1">
+                              <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
                                 <History className="w-3 h-3" />
                                 <span>Corrections Layered On Top:</span>
                               </div>
                               {entryCorrections.map((c) => (
                                 <div
                                   key={c.id}
-                                  className="text-2xs font-mono p-1.5 bg-amber-50/60 border border-amber-200 rounded text-amber-900"
+                                  className="text-[10px] font-mono p-1.5 bg-amber-950/40 border border-amber-800/80 rounded text-amber-300"
                                 >
                                   <span>{c.field}: </span>
                                   <span className="line-through opacity-70">
@@ -487,7 +422,7 @@ export const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
                                   </span>{' '}
                                   → <strong>"{c.corrected_value}"</strong>{' '}
                                   {c.reason && (
-                                    <span className="text-stone-600">({c.reason})</span>
+                                    <span className="text-zinc-400">({c.reason})</span>
                                   )}
                                 </div>
                               ))}
