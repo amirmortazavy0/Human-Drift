@@ -20,9 +20,6 @@ import {
   Radio,
 } from 'lucide-react';
 import { BoardData, BoardNodeItem, Journey, NodeStatus } from '../types';
-<<<<<<< HEAD
-import { getBoard, updateNode } from '../api';
-=======
 import { updateNode } from '../api';
 import {
   formatEntryType,
@@ -30,7 +27,6 @@ import {
   formatRelativeTime,
   formatMinutes,
 } from '../utils/formatters';
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
 
 interface BoardViewProps {
   boardData: BoardData | null;
@@ -166,11 +162,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-1.5 text-stone-400 text-xs font-medium">
             <Filter className="w-3.5 h-3.5 text-stone-500" />
-<<<<<<< HEAD
-            <span>Context:</span>
-=======
             <span>Thing:</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </div>
           <select
             value={selectedJourney ? selectedJourney.id : 'ALL'}
@@ -184,11 +176,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
             }}
             className="bg-stone-950 border border-stone-800 text-stone-200 text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500 transition-colors"
           >
-<<<<<<< HEAD
-            <option value="ALL">All contexts ({journeys.length})</option>
-=======
             <option value="ALL">All Things ({journeys.length})</option>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             {journeys.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.name} {j.status !== 'ACTIVE' ? `(${j.status})` : ''}
@@ -247,13 +235,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         <div className="flex items-center gap-2.5 text-xs flex-wrap">
           <div className="flex items-center gap-1.5 bg-stone-950 px-3 py-1.5 rounded-xl border border-stone-800">
             <Layers className="w-3.5 h-3.5 text-stone-400" />
-<<<<<<< HEAD
-            <span className="text-stone-400">Things:</span>
-            <span className="font-semibold text-stone-100">{loadedBoard?.total_nodes ?? 0}</span>
-=======
             <span className="text-stone-400">Items:</span>
             <span className="font-semibold text-stone-100">{boardData?.total_nodes ?? 0}</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </div>
           <div className="flex items-center gap-1.5 bg-stone-950 px-3 py-1.5 rounded-xl border border-stone-800">
             <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -268,35 +251,18 @@ export const BoardView: React.FC<BoardViewProps> = ({
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 font-medium text-xs border border-stone-700 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-<<<<<<< HEAD
-              <span className="hidden sm:inline">New Thing</span>
-=======
               <span>+ Add Task</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             </button>
           )}
         </div>
       </div>
 
-<<<<<<< HEAD
-      {boardLoading && <div className="text-xs text-stone-500">Refreshing Board…</div>}
-      {boardError && (
-        <div className="text-xs text-red-300 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">{boardError}</div>
-      )}
-
-      {/* 4-Column Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {columnsConfig.map((col) => {
-          const items = columns[col.key] || [];
-          const Icon = col.icon;
-=======
       {/* VIEW 1: 4-Column Board Grid */}
       {activeSubTab === 'COLUMNS' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {columnsConfig.map((col) => {
             const items = columns[col.key] || [];
             const Icon = col.icon;
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
 
             return (
               <div
@@ -339,31 +305,9 @@ export const BoardView: React.FC<BoardViewProps> = ({
                               {node.node_type}
                             </span>
                           </div>
-<<<<<<< HEAD
                           <div className="flex items-center gap-1.5 justify-end">
                             <span className="text-stone-500">Tracking:</span>
                             <span className="font-mono text-stone-300">{node.session_count}</span>
-=======
-
-                          {node.description && (
-                            <p className="mt-1 text-xs text-stone-400 line-clamp-2">
-                              {node.description}
-                            </p>
-                          )}
-
-                          {/* Core Display Metrics */}
-                          <div className="mt-3 grid grid-cols-2 gap-2 pt-2.5 border-t border-stone-900 text-xs text-stone-400">
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span className="font-mono text-stone-200">
-                                {formatMinutes(node.total_logged_minutes)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 justify-end">
-                              <span className="text-stone-500">Sessions:</span>
-                              <span className="font-mono text-stone-300">{node.session_count}</span>
-                            </div>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                           </div>
 
                           {/* Last Activity */}
@@ -374,39 +318,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             </span>
                           </div>
 
-<<<<<<< HEAD
-                        {node.recent_logs && node.recent_logs.length > 0 && (
-                          <div className="mt-2.5 pt-2 border-t border-stone-900">
-                            <div className="text-[11px] text-stone-400 mb-1.5">Recent Logs</div>
-                            <div className="space-y-1.5">
-                              {node.recent_logs.map((log) => (
-                                <div key={log.id} className="rounded-lg bg-stone-900/60 px-2 py-1.5 text-[11px]">
-                                  <div className="flex items-center justify-between gap-2 text-stone-500">
-                                    <span>{log.entry_type.replaceAll('_', ' ')}</span>
-                                    <span>{formatRelativeTime(log.logged_at)}</span>
-                                  </div>
-                                  {log.note && <div className="mt-0.5 text-stone-300 line-clamp-2">{log.note}</div>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Recent Tracking Collapsible */}
-                        {node.recent_sessions && node.recent_sessions.length > 0 && (
-                          <div className="mt-2.5 pt-2 border-t border-stone-900">
-                            <button
-                              onClick={() => toggleHistory(node.id)}
-                              className="w-full flex items-center justify-between text-[11px] text-stone-400 hover:text-stone-200 cursor-pointer py-0.5"
-                            >
-                              <span>Recent History ({node.recent_sessions.length})</span>
-                              {isExpanded ? (
-                                <ChevronUp className="w-3 h-3" />
-                              ) : (
-                                <ChevronDown className="w-3 h-3" />
-                              )}
-                            </button>
-=======
                           {/* Recent Session History Collapsible */}
                           {node.recent_sessions && node.recent_sessions.length > 0 && (
                             <div className="mt-2.5 pt-2 border-t border-stone-900">
@@ -421,7 +332,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
                                   <ChevronDown className="w-3 h-3" />
                                 )}
                               </button>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
 
                               {isExpanded && (
                                 <div className="mt-1.5 space-y-1.5 bg-stone-900/60 p-2 rounded-lg text-[11px]">
@@ -468,33 +378,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
                               </button>
                             )}
                           </div>
-<<<<<<< HEAD
-                        )}
-
-                        {/* Card Actions (Mobile-friendly, large touch targets) */}
-                        <div className="mt-3 pt-2.5 border-t border-stone-800/60 flex items-center justify-between gap-2">
-                          {onQuickLogForNode && (
-                            <button
-                              onClick={() => onQuickLogForNode(node.name)}
-                              className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-950/40 hover:bg-amber-950/70 border border-amber-900/40 rounded-lg px-2 py-1.5 transition cursor-pointer"
-                              title="Log reality for this Thing"
-                            >
-                              <span>+ Log</span>
-                            </button>
-                          )}
-
-                          {col.nextStatus && (
-                            <button
-                              disabled={isUpdating}
-                              onClick={() => handleStatusChange(node.id, col.nextStatus!)}
-                              className="ml-auto flex items-center gap-1 text-[11px] font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg px-2.5 py-1.5 transition cursor-pointer disabled:opacity-50"
-                            >
-                              <span>{col.nextLabel}</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          )}
-=======
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                         </div>
                       );
                     })

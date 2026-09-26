@@ -1518,25 +1518,10 @@ async function startServer() {
 
   // Markdown Obsidian / AI-ingestible Export as specified in Master Build Prompt
   app.post('/api/export/markdown', (_req: Request, res: Response) => {
-<<<<<<< HEAD
-    const { execFile } = require('child_process');
-    const exportScript = path.resolve(process.cwd(), 'export.py');
-    const exportDir = path.resolve(process.cwd(), 'export');
-    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-
-    execFile(pythonCommand, [exportScript, exportDir], (error: any, stdout: string, stderr: string) => {
-      if (error) {
-        console.error('[Export Error]', error, stderr);
-        res.status(500).json({ detail: 'Export generation failed', error: String(error) });
-        return;
-      }
-      console.log('[Export Completed]', stdout);
-=======
     try {
       const exportDir = path.resolve(process.cwd(), 'export');
       const result = runMarkdownExport(exportDir);
       console.log('[Export Completed] Generated markdown export to', result.exportDir);
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
       res.json({
         success: true,
         message: 'Markdown export completed successfully',

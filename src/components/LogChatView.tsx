@@ -158,11 +158,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
 
       const thingName = journeys.find((j) => j.id === proposal.journey_id)?.name || 'Thing';
       setSuccessMsg(
-<<<<<<< HEAD
-        `Reality recorded. Plan "${proposal.intention}" is preserved.`
-=======
         `Recorded work under "${thingName}" (${proposal.duration_minutes}m). Logged to your Pist vault.`
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
       );
       setProposal(null);
       setInputText('');
@@ -182,17 +178,6 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
   ];
 
   return (
-<<<<<<< HEAD
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {/* Header & Mode Status */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-        <div>
-          <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
-            <span>Log</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-mono font-normal">
-              View 1
-            </span>
-=======
     <div className="space-y-4 max-w-3xl mx-auto pb-16">
       {/* Top Header & AI Model Status */}
       <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-4 rounded-2xl shadow-sm">
@@ -200,7 +185,6 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
           <h2 className="text-base font-bold text-zinc-100 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>Quick Log</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </h2>
           <p className="text-xs text-zinc-400">
             Log completed work in natural language or voice — reality is parsed into structured records
@@ -231,29 +215,6 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Target Journey Picker */}
-      <div className="flex items-center gap-2 text-xs bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800">
-        <FolderOpen className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-        <span className="text-zinc-400 flex-shrink-0">Thing context:</span>
-        <select
-          value={selectedJourneyId}
-          onChange={(e) => setSelectedJourneyId(e.target.value)}
-          className="bg-zinc-950 border border-zinc-700 text-zinc-200 rounded px-2.5 py-1 text-xs focus:outline-none focus:border-zinc-500 min-w-[180px]"
-        >
-          {(journeys || []).length === 0 ? (
-            <option value="">No journeys created yet</option>
-          ) : (
-            (journeys || []).map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.name} {j.status === 'ACTIVE' ? '(Active)' : ''}
-              </option>
-            ))
-          )}
-        </select>
-        <span className="text-zinc-500 ml-auto hidden sm:inline text-[11px]">
-          {(nodes || []).filter((n) => n.journey_id === selectedJourneyId).length} Things available
-=======
       {/* Target Thing Picker */}
       <div className="flex items-center justify-between gap-2 text-xs bg-zinc-900/80 p-3 rounded-2xl border border-zinc-800 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap flex-1">
@@ -288,7 +249,6 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
 
         <span className="text-zinc-500 text-[11px]">
           {(nodes || []).filter((n) => n.journey_id === selectedJourneyId).length} sub-items cataloged
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
         </span>
       </div>
 
@@ -379,11 +339,7 @@ export const LogChatView: React.FC<LogChatViewProps> = ({
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">Review Proposed Entry</h3>
                 <p className="text-[11px] text-zinc-400">
-<<<<<<< HEAD
-                  Review the structured proposal before recording it.
-=======
                   Verify or adjust fields before committing to your Pist vault
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                 </p>
               </div>
             </div>

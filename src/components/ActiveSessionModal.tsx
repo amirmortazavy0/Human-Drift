@@ -121,30 +121,18 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
 
         {/* Header: Thing & Intention */}
         <div className="space-y-1">
-<<<<<<< HEAD
-          <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>Active Tracking</span>
-            <span className="text-zinc-500">• {journey?.name}</span>
-=======
           <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
             <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
             <span>Tracking Session</span>
             <span className="text-zinc-500">•</span>
             <span className="text-zinc-300 font-semibold">{journey?.name || 'Active Thing'}</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </div>
           <h3 className="text-base font-bold text-zinc-100">
             "{session.intention}"
           </h3>
-<<<<<<< HEAD
-          <p className="text-[11px] text-zinc-400">
-            Original Plan set at {session.started_at?.substring(11, 16)}.
-=======
           <p className="text-[11px] text-zinc-400 flex items-center gap-1">
             <Clock className="w-3 h-3 text-zinc-500" />
             <span>Started at {formatLocalTime(session.started_at)}</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </p>
         </div>
 
@@ -212,19 +200,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
                     }`}
                   >
-<<<<<<< HEAD
-                    {({
-                      TASK_STARTED: 'Started',
-                      CONTEXT_SWITCH: 'Context changed',
-                      DISCOVERY: 'Discovery',
-                      INTENTION_REVISED: 'Plan revised',
-                      NOTE: 'Note',
-                      TASK_PAUSED: 'Paused',
-                      TASK_COMPLETED: 'Completed',
-                    } as Partial<Record<EntryType, string>>)[t] || t}
-=======
                     {formatEntryType(t)}
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                   </button>
                 ))}
               </div>
@@ -348,11 +324,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
               className="px-3.5 py-1.5 bg-rose-950/70 border border-rose-800/80 text-rose-300 hover:bg-rose-900/80 rounded-xl flex items-center gap-1.5 font-medium transition cursor-pointer"
             >
               <Square className="w-3.5 h-3.5" />
-<<<<<<< HEAD
-              <span>Complete Tracking</span>
-=======
               <span>Conclude Tracking</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             </button>
           </div>
         )}

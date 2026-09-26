@@ -1,44 +1,6 @@
 import { AppData, BoardData, BoardNodeItem, BoardRecentEntry, Node, Session, SessionEntry } from '../src/types';
 
-<<<<<<< HEAD
-export interface BoardNodeItem {
-  id: string;
-  journey_id: string;
-  parent_id?: string | null;
-  name: string;
-  description?: string | null;
-  status: 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'DORMANT' | 'COMPLETE';
-  node_type: string;
-  total_logged_minutes: number;
-  session_count: number;
-  last_activity_at: string | null;
-  recent_sessions: Array<{
-    id: string;
-    intention: string;
-    duration_minutes: number;
-    logged_at: string;
-  }>;
-  recent_logs: Array<{
-    id: string;
-    logged_at: string;
-    entry_type: string;
-    note: string | null;
-  }>;
-}
-
-export interface BoardData {
-  columns: {
-    planned: BoardNodeItem[];
-    in_progress: BoardNodeItem[];
-    done: BoardNodeItem[];
-    paused: BoardNodeItem[];
-  };
-  total_nodes: number;
-  total_active_minutes: number;
-}
-=======
 export type { BoardNodeItem, BoardData };
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
 
 export function computeBoardData(data: AppData, targetJourneyId?: string): BoardData {
   const isAll = !targetJourneyId || targetJourneyId === 'ALL';

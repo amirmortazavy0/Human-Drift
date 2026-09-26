@@ -1,14 +1,7 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-import { Condition, Journey, Node, Session } from '../types';
-import { createJourney, startSession } from '../api';
-import { Play, BatteryCharging, Brain, MapPin, Volume2, X, Lock } from 'lucide-react';
-=======
 import React, { useState, useEffect } from 'react';
 import { Condition, Journey, Node, Session } from '../types';
 import { startSession, createJourney } from '../api';
 import { Play, X, Plus, Clock, Sparkles, AlertCircle } from 'lucide-react';
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
 
 interface StartSessionModalProps {
   isOpen: boolean;
@@ -77,23 +70,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
-    if (!intention.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      let effectiveJourneyId = journeyId;
-      if (!effectiveJourneyId) {
-        const createdJourney = await createJourney({
-          name: 'My Things',
-          description: 'Default context created by Pist.',
-        });
-        effectiveJourneyId = createdJourney.id;
-      }
-
-      const created = await startSession({
-        journey_id: effectiveJourneyId,
-=======
     setValidationError(null);
 
     let activeJId = journeyId;
@@ -135,7 +111,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
       const selectedNode = nodes.find((n) => n.id === nodeId);
       const created = await startSession({
         journey_id: activeJId,
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
         node_id: nodeId || null,
         intention: intention.trim(),
         label: selectedNode ? selectedNode.name : 'Focus Session',
@@ -169,13 +144,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
           </div>
           <div>
             <h3 className="font-bold text-zinc-100 text-base">Start Tracking</h3>
-<<<<<<< HEAD
-            <p className="text-xs text-zinc-400">Set your Plan before reality unfolds.</p>
-=======
             <p className="text-xs text-zinc-400">
               Direct your focus on a Thing — reality will be logged as it unfolds
             </p>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </div>
         </div>
 
@@ -189,53 +160,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* Target Thing Picker or Inline Creator */}
           <div>
-<<<<<<< HEAD
-            <label className="block text-zinc-400 mb-1 font-medium">Context</label>
-            <select
-              value={journeyId}
-              onChange={(e) => {
-                setJourneyId(e.target.value);
-                setNodeId('');
-              }}
-              className="w-full bg-zinc-950 border border-zinc-700 text-zinc-200 rounded-lg p-2 focus:outline-none"
-            >
-              {journeys.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Target Node */}
-          <div>
-            <label className="block text-zinc-400 mb-1 font-medium">Thing (optional)</label>
-            <select
-              value={nodeId}
-              onChange={(e) => {
-                setNodeId(e.target.value);
-                const n = nodes.find((node) => node.id === e.target.value);
-                if (n && !intention) {
-                  setIntention(`Work on ${n.name}`);
-                }
-              }}
-              className="w-full bg-zinc-950 border border-zinc-700 text-zinc-200 rounded-lg p-2 focus:outline-none"
-            >
-              <option value="">(No specific node / General session)</option>
-              {journeyNodes.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.name} ({n.status})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Intention Input */}
-          <div className="space-y-1">
-            <label className="block text-zinc-300 font-semibold flex items-center gap-1.5">
-              <Lock className="w-3 h-3 text-cyan-400" />
-              <span>Plan</span>
-=======
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-zinc-300 font-medium">
                 Thing <span className="text-amber-400">*</span>
@@ -321,31 +245,15 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
           <div>
             <label className="block text-zinc-300 font-medium mb-1.5">
               What are you working on? <span className="text-amber-400">*</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             </label>
             <textarea
               value={intention}
               onChange={(e) => setIntention(e.target.value)}
-<<<<<<< HEAD
-              placeholder="What do you plan to do during this Tracking?"
-=======
               placeholder="What do you plan to work on during this session?"
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
               rows={2}
               required
               className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-zinc-100 placeholder-zinc-500 text-xs focus:outline-none focus:border-amber-500 resize-none font-medium"
             />
-<<<<<<< HEAD
-            <p className="text-[11px] text-zinc-500">
-              The original Plan is preserved. Changes are recorded as revisions.
-            </p>
-          </div>
-
-          {/* Initial Condition */}
-          <div className="space-y-2 pt-1 border-t border-zinc-800">
-            <label className="block text-zinc-400 font-medium">Current context</label>
-            <div className="grid grid-cols-2 gap-2">
-=======
             <p className="text-[11px] text-zinc-500 mt-1">
               Your starting focus is recorded as reality unfolds.
             </p>
@@ -358,7 +266,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({
               <span className="text-[11px] text-zinc-500">Tap to toggle anytime</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
               <div>
                 <span className="text-[10px] text-zinc-500 block mb-1">Energy</span>
                 <select

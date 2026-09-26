@@ -353,11 +353,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
             </span>
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-<<<<<<< HEAD
-            Organize Things at any depth and track their current state.
-=======
             Hierarchical Thing & Sub-item trees. Unlimited depth. Status tracking.
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </p>
         </div>
 
@@ -366,22 +362,13 @@ export const TaskView: React.FC<TaskViewProps> = ({
             onClick={() => setIsCreatingJourney(true)}
             className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-<<<<<<< HEAD
-            <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
-            <span>New Thing</span>
-=======
             <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
             <span>+ New Thing</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </button>
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Contexts */}
-=======
       {/* Thing Selector Tabs */}
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
         {journeys.map((j) => (
           <button
@@ -401,19 +388,11 @@ export const TaskView: React.FC<TaskViewProps> = ({
       {/* Create Thing Modal */}
       {isCreatingJourney && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-<<<<<<< HEAD
-          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl">
-            <h3 className="text-sm font-semibold text-zinc-100 mb-3">Create New Thing</h3>
-            <form onSubmit={handleCreateJourney} className="space-y-3">
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1">Thing Name</label>
-=======
           <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl">
             <h3 className="text-sm font-semibold text-zinc-100 mb-3">Create New Thing</h3>
             <form onSubmit={handleCreateJourney} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-zinc-400 mb-1">Thing Name *</label>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                 <input
                   type="text"
                   required
@@ -428,14 +407,9 @@ export const TaskView: React.FC<TaskViewProps> = ({
                 <textarea
                   value={newJourneyDesc}
                   onChange={(e) => setNewJourneyDesc(e.target.value)}
-<<<<<<< HEAD
-                  placeholder="Optional context for this Thing..."
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 focus:outline-none"
-=======
                   placeholder="What is this Thing about?"
                   rows={2}
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-amber-500"
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">

@@ -248,11 +248,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
             <Compass className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-zinc-300">No sessions match current filter</p>
             <p className="text-xs text-zinc-500 mt-1">
-<<<<<<< HEAD
-              Start recording Plans and Reality in Log, or start Tracking from Things.
-=======
               Start logging your work in Quick Log or start an active session in Task View.
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
             </p>
           </div>
         ) : (
