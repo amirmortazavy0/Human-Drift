@@ -58,8 +58,6 @@ import { BoardView } from './components/BoardView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { AuthPage } from './components/AuthPage';
-import { CreateThingModal } from './components/CreateThingModal';
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -93,7 +91,6 @@ export default function App() {
   const [startModalNode, setStartModalNode] = useState<Node | null>(null);
   const [startModalJourney, setStartModalJourney] = useState<Journey | null>(null);
   const [showActiveModal, setShowActiveModal] = useState(false);
-  const [showCreateThingModal, setShowCreateThingModal] = useState(false);
   const [showRetrospectiveModal, setShowRetrospectiveModal] = useState(false);
 
   // Export State
@@ -404,11 +401,7 @@ export default function App() {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-<<<<<<< HEAD
-            <span>1. Log</span>
-=======
             <span>1. Quick Log</span>
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
           </button>
 
           <button
@@ -546,13 +539,9 @@ export default function App() {
                 onQuickLogForNode={(_nodeName) => {
                   setActiveTab('LOG');
                 }}
-<<<<<<< HEAD
-                onOpenNewNodeModal={() => setShowCreateThingModal(true)}
-=======
                 onOpenNewNodeModal={() => handleStartSessionPrompt()}
                 onOpenNewThingModal={() => setShowCreateThingModal(true)}
                 onLogPastTime={() => setShowRetrospectiveModal(true)}
->>>>>>> 65236d3ada20254162f641d3314d68902e1287e9
               />
             )}
 
