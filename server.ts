@@ -47,6 +47,14 @@ import {
   SessionEntry,
 } from './src/types';
 import {
+  deriveSessionStatusFromEndReason,
+  formatConditionValue,
+  toCanonicalIso,
+  validateCondition,
+  validateSessionEndReason,
+  validateSessionQuality,
+} from './src/utils/formatters';
+import {
   signupUser,
   loginUser,
   expressAuthMiddleware,
@@ -466,7 +474,9 @@ async function startServer() {
       label,
       predecessor_session_id,
       initial_node_id,
+      node_id,
       condition,
+      started_at,
     } = req.body;
 
     if (!journey_id) {
@@ -478,6 +488,29 @@ async function startServer() {
       return;
     }
 
+    const condCheck = validateCondition(condition, {
+      energy: 'HIGH',
+      focus: 'DEEP',
+      location: 'HOME',
+      environment: 'QUIET',
+    });
+    if (!condCheck.valid) {
+      res.status(400).json({ detail: condCheck.error });
+      return;
+    }
+
+    let startIso = nowIso;
+    if (started_at) {
+      try {
+        startIso = toCanonicalIso(started_at);
+      } catch (err: any) {
+        res.status(400).json({ detail: err.message });
+        return;
+      }
+    }
+
+    const resolvedInitialNodeId = initial_node_id || node_id || null;
+
     // Check for active overlapping session in this journey
     const existingActive = data.sessions.find(
       (s) => s.journey_id === journey_id && s.status === 'ACTIVE'
@@ -488,9 +521,10 @@ async function startServer() {
     const session: Session = {
       id: sessionId,
       journey_id,
+      node_id: resolvedInitialNodeId,
       label: label ? String(label).trim() : null,
       intention: String(intention).trim(), // IMMUTABLE
-      started_at: nowIso,
+      started_at: startIso,
       ended_at: null,
       status: 'ACTIVE',
       end_reason: null,
@@ -521,23 +555,17 @@ async function startServer() {
       payload: { intention: session.intention },
     });
 
-    // If initial_node_id provided, start working on that task immediately
-    if (initial_node_id) {
-      const initialCondition = condition || {
-        energy: 'HIGH',
-        focus: 'DEEP',
-        location: 'HOME',
-        environment: 'QUIET',
-      };
+    // Record initial SessionEntry capturing starting Condition and active Node if provided
+    if (resolvedInitialNodeId) {
       const entryId = `ent-${randomUUID()}`;
       const entry: SessionEntry = {
         id: entryId,
         session_id: session.id,
-        node_id: initial_node_id,
+        node_id: resolvedInitialNodeId,
         entry_type: 'TASK_STARTED',
-        logged_at: nowIso,
+        logged_at: startIso,
         note: null,
-        condition: initialCondition,
+        condition: condCheck.value,
         discovery_ref: null,
       };
       data.entries.push(entry);
@@ -545,6 +573,25 @@ async function startServer() {
         entity_type: 'SessionEntry',
         entity_id: entry.id,
         event_type: 'TASK_STARTED',
+        payload: entry,
+      });
+    } else if (condition) {
+      const entryId = `ent-${randomUUID()}`;
+      const entry: SessionEntry = {
+        id: entryId,
+        session_id: session.id,
+        node_id: null,
+        entry_type: 'NOTE',
+        logged_at: startIso,
+        note: 'Initial session condition recorded',
+        condition: condCheck.value,
+        discovery_ref: null,
+      };
+      data.entries.push(entry);
+      appendEvent(data, {
+        entity_type: 'SessionEntry',
+        entity_id: entry.id,
+        event_type: 'ENTRY_LOGGED',
         payload: entry,
       });
     }
@@ -606,21 +653,36 @@ async function startServer() {
       return;
     }
 
-    const { reflection, quality, status = 'COMPLETE', note, end_reason = 'NATURAL_COMPLETION', successor_session_id } = req.body;
+    const { reflection, quality, status, note, end_reason, successor_session_id } = req.body;
+
+    const endReasonCheck = validateSessionEndReason(end_reason, 'NATURAL_COMPLETION');
+    if (!endReasonCheck.valid) {
+      res.status(400).json({ detail: endReasonCheck.error });
+      return;
+    }
+
+    const qualityCheck = validateSessionQuality(quality);
+    if (!qualityCheck.valid) {
+      res.status(400).json({ detail: qualityCheck.error });
+      return;
+    }
+
+    const derivedStatus = deriveSessionStatusFromEndReason(endReasonCheck.value, status);
 
     const prevValue = { ...session };
     session.ended_at = nowIso;
-    session.status = status;
-    session.end_reason = end_reason || 'NATURAL_COMPLETION';
+    session.status = derivedStatus;
+    session.end_reason = endReasonCheck.value;
     if (successor_session_id !== undefined) session.successor_session_id = successor_session_id || null;
     session.reflection = reflection ? String(reflection).trim() : null;
-    session.quality = quality || null;
+    session.quality = qualityCheck.value;
     if (note !== undefined) session.note = note ? String(note).trim() : null;
     session.updated_at = nowIso;
 
     let eventType = 'SESSION_COMPLETED';
-    if (status === 'INCOMPLETE') eventType = 'SESSION_MARKED_INCOMPLETE';
-    else if (status === 'ABANDONED') eventType = 'SESSION_ABANDONED';
+    if (derivedStatus === 'INCOMPLETE') eventType = 'SESSION_MARKED_INCOMPLETE';
+    else if (derivedStatus === 'ABANDONED') eventType = 'SESSION_ABANDONED';
+    else if (derivedStatus === 'PAUSED') eventType = 'SESSION_PAUSED';
 
     appendEvent(data, {
       entity_type: 'Session',
@@ -644,6 +706,68 @@ async function startServer() {
 
     writeAppData(data);
     res.json(session);
+  });
+
+  // Update Active Session Condition (Focus, Energy, Location, Environment remain mutable during active session)
+  app.post('/api/sessions/:id/condition', (req: Request, res: Response) => {
+    const data = readAppData();
+    const nowIso = getCurrentIso();
+    const session = data.sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ detail: 'Session not found' });
+      return;
+    }
+
+    const sessionEntries = data.entries.filter((e) => e.session_id === session.id);
+    const lastEntry = sessionEntries[sessionEntries.length - 1];
+    const fallbackCond = lastEntry?.condition || {
+      energy: 'MEDIUM',
+      focus: 'NORMAL',
+      location: 'HOME',
+      environment: 'QUIET',
+    };
+
+    const condCheck = validateCondition(req.body.condition || req.body, fallbackCond);
+    if (!condCheck.valid) {
+      res.status(400).json({ detail: condCheck.error });
+      return;
+    }
+
+    const newCond = condCheck.value;
+    const activeNodeId =
+      req.body.node_id !== undefined
+        ? req.body.node_id
+        : lastEntry?.node_id ?? session.node_id ?? null;
+
+    const noteText =
+      req.body.note ||
+      `Condition updated: Energy ${formatConditionValue(newCond.energy)}, Focus ${formatConditionValue(newCond.focus)}, Location ${formatConditionValue(newCond.location)}, Environment ${formatConditionValue(newCond.environment)}`;
+
+    const entry: SessionEntry = {
+      id: `ent-${randomUUID()}`,
+      session_id: session.id,
+      node_id: activeNodeId,
+      entry_type: 'NOTE',
+      logged_at: nowIso,
+      note: noteText,
+      condition: newCond,
+      discovery_ref: null,
+    };
+
+    data.entries.push(entry);
+
+    appendEvent(data, {
+      entity_type: 'SessionEntry',
+      entity_id: entry.id,
+      event_type: 'CONDITION_CHANGED',
+      payload: newCond,
+      previous_value: lastEntry ? lastEntry.condition : null,
+    });
+
+    session.updated_at = nowIso;
+    writeAppData(data);
+
+    res.status(201).json({ session, entry, condition: newCond });
   });
 
   // Decision 2 — Cross-Journey Session Scope
@@ -981,17 +1105,25 @@ async function startServer() {
     }
 
     const defaultCondition = {
-      energy: 'MEDIUM',
-      focus: 'NORMAL',
-      location: 'HOME',
-      environment: 'QUIET',
+      energy: 'MEDIUM' as const,
+      focus: 'NORMAL' as const,
+      location: 'HOME' as const,
+      environment: 'QUIET' as const,
     };
 
     const sessionEntries = data.entries.filter((e) => e.session_id === sessionId);
     const lastEntry = sessionEntries[sessionEntries.length - 1];
 
-    // Sticky condition: carry forward from previous entry unless modified
-    const effectiveCondition = condition || (lastEntry ? lastEntry.condition : defaultCondition);
+    // Sticky condition: carry forward from previous entry unless modified, and validate
+    const condCheck = validateCondition(
+      condition,
+      lastEntry ? lastEntry.condition : defaultCondition
+    );
+    if (!condCheck.valid) {
+      res.status(400).json({ detail: condCheck.error });
+      return;
+    }
+    const effectiveCondition = condCheck.value;
 
     const entryId = `ent-${randomUUID()}`;
     const entry: SessionEntry = {
@@ -1403,28 +1535,60 @@ async function startServer() {
       syncNodeToSupabase(node);
     }
 
-    // 3. Compute timestamps: started_at = now - duration_minutes (or custom timestamps if provided)
+    // Validate Condition, Quality, and End Reason before persisting
+    const condCheck = validateCondition(condition);
+    if (!condCheck.valid) {
+      res.status(400).json({ detail: condCheck.error });
+      return;
+    }
+    const qualityCheck = validateSessionQuality(req.body.quality);
+    if (!qualityCheck.valid) {
+      res.status(400).json({ detail: qualityCheck.error });
+      return;
+    }
+    const endReasonCheck = validateSessionEndReason(req.body.end_reason, 'NATURAL_COMPLETION');
+    if (!endReasonCheck.valid) {
+      res.status(400).json({ detail: endReasonCheck.error });
+      return;
+    }
+
+    // 3. Compute timestamps: started_at = end - duration_minutes (or custom timestamps if provided)
     const durMins = Math.max(1, Number(duration_minutes) || 60);
-    const endIso = req.body.ended_at ? new Date(req.body.ended_at).toISOString() : nowIso;
-    const endDate = new Date(endIso);
-    const startIso = req.body.started_at
-      ? new Date(req.body.started_at).toISOString()
-      : new Date(endDate.getTime() - durMins * 60 * 1000).toISOString();
+    let endIso = nowIso;
+    let startIso = new Date(now.getTime() - durMins * 60 * 1000).toISOString();
+    try {
+      if (req.body.ended_at) {
+        endIso = toCanonicalIso(req.body.ended_at);
+      }
+      const endDate = new Date(endIso);
+      startIso = req.body.started_at
+        ? toCanonicalIso(req.body.started_at)
+        : new Date(endDate.getTime() - durMins * 60 * 1000).toISOString();
+    } catch (err: any) {
+      res.status(400).json({ detail: err.message });
+      return;
+    }
+
+    const derivedStatus = deriveSessionStatusFromEndReason(
+      endReasonCheck.value,
+      req.body.status
+    );
 
     // 4. Create Session (Intention is locked and immutable)
     const session: Session = {
       id: `ses-${randomUUID()}`,
       journey_id: journey.id,
+      node_id: node ? node.id : null,
       label: `${work_type} Session`,
       intention: String(intention).trim(),
       started_at: startIso,
       ended_at: endIso,
-      status: 'COMPLETE',
-      end_reason: 'NATURAL_COMPLETION',
+      status: derivedStatus,
+      end_reason: endReasonCheck.value,
       predecessor_session_id: null,
       successor_session_id: null,
       reflection: req.body.reflection ? String(req.body.reflection).trim() : null,
-      quality: req.body.quality !== undefined ? req.body.quality : null,
+      quality: qualityCheck.value,
       note: req.body.note || `Logged work: ${intention}`,
       created_at: nowIso,
       updated_at: nowIso,
@@ -1444,28 +1608,38 @@ async function startServer() {
       payload: { session_id: session.id, intention: session.intention },
     });
 
-    // 5. Create Session Entry
-    const sessionEntry: SessionEntry = {
+    // 5. Create paired Session Entries (start boundary at startIso + end boundary at endIso)
+    const startEntry: SessionEntry = {
       id: `ent-${randomUUID()}`,
       session_id: session.id,
       node_id: node ? node.id : null,
-      entry_type: node_status === 'COMPLETE' ? 'TASK_COMPLETED' : 'TASK_STARTED',
-      logged_at: nowIso,
+      entry_type: 'TASK_STARTED',
+      logged_at: startIso,
       note: `${session.intention} (${durMins} min)`,
-      condition: condition || {
-        energy: 'MEDIUM',
-        focus: 'NORMAL',
-        location: 'HOME',
-        environment: 'QUIET',
-      },
+      condition: condCheck.value,
     };
-    data.entries.push(sessionEntry);
+    const endEntry: SessionEntry = {
+      id: `ent-${randomUUID()}`,
+      session_id: session.id,
+      node_id: node ? node.id : null,
+      entry_type: node_status === 'COMPLETE' ? 'TASK_COMPLETED' : 'TASK_PAUSED',
+      logged_at: endIso,
+      note: `${session.intention} (${durMins} min)`,
+      condition: condCheck.value,
+    };
+    data.entries.push(startEntry, endEntry);
 
     appendEvent(data, {
       entity_type: 'SessionEntry',
-      entity_id: sessionEntry.id,
+      entity_id: startEntry.id,
       event_type: 'ENTRY_LOGGED',
-      payload: sessionEntry,
+      payload: startEntry,
+    });
+    appendEvent(data, {
+      entity_type: 'SessionEntry',
+      entity_id: endEntry.id,
+      event_type: 'ENTRY_LOGGED',
+      payload: endEntry,
     });
 
     appendEvent(data, {
@@ -1474,7 +1648,7 @@ async function startServer() {
       event_type: 'SESSION_COMPLETED',
       payload: {
         session_id: session.id,
-        end_reason: 'NATURAL_COMPLETION',
+        end_reason: endReasonCheck.value,
         duration_minutes: durMins,
       },
     });
@@ -1483,7 +1657,8 @@ async function startServer() {
 
     // Sync to Supabase in background
     syncSessionToSupabase(session);
-    syncSessionEntryToSupabase(sessionEntry);
+    syncSessionEntryToSupabase(startEntry);
+    syncSessionEntryToSupabase(endEntry);
 
     const board = computeBoardData(data, journey.id);
 
@@ -1491,7 +1666,8 @@ async function startServer() {
       success: true,
       session,
       node,
-      entry: sessionEntry,
+      entry: endEntry,
+      entries: [startEntry, endEntry],
       board,
     });
   });

@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { ArrowRight, Compass } from 'lucide-react';
-import { ThingType } from '../types';
+import { NodeType } from '../types';
 import { Lang, t } from '../i18n';
 
 interface FirstRunModalProps {
   lang: Lang;
-  onComplete: (journeyName: string, nodeName: string, nodeType: ThingType) => Promise<void>;
+  onComplete: (journeyName: string, nodeName: string, nodeType: NodeType) => Promise<void>;
 }
 
 export const FirstRunModal: React.FC<FirstRunModalProps> = ({ lang, onComplete }) => {
-  const [journeyName, setThing contextName] = useState('');
+  const [journeyName, setJourneyName] = useState('');
   const [nodeName, setThingName] = useState('');
-  const [nodeType, setThingType] = useState<ThingType>('PROJECT');
+  const [nodeType, setThingType] = useState<NodeType>('PROJECT');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,8 +31,8 @@ export const FirstRunModal: React.FC<FirstRunModalProps> = ({ lang, onComplete }
     }
   };
 
-  const nodeTypes: ThingType[] = ['PROJECT', 'TASK', 'MILESTONE', 'NOTE'];
-  const nodeTypeLabels: Record<ThingType, { en: string; fa: string }> = {
+  const nodeTypes: NodeType[] = ['PROJECT', 'TASK', 'MILESTONE', 'NOTE'];
+  const nodeTypeLabels: Record<NodeType, { en: string; fa: string }> = {
     PROJECT:   { en: 'Project',   fa: 'پروژه' },
     TASK:      { en: 'Task',      fa: 'وظیفه' },
     MILESTONE: { en: 'Milestone', fa: 'نقطه عطف' },
@@ -63,33 +63,33 @@ export const FirstRunModal: React.FC<FirstRunModalProps> = ({ lang, onComplete }
 
           <div>
             <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-              {t(lang, 'firstRunThing contextLabel')}
+              {t(lang, 'firstRunJourneyLabel')}
             </label>
             <input
               type="text"
               value={journeyName}
-              onChange={e => setThing contextName(e.target.value)}
-              placeholder={t(lang, 'firstRunThing contextPlaceholder')}
+              onChange={e => setJourneyName(e.target.value)}
+              placeholder={t(lang, 'firstRunJourneyPlaceholder')}
               className="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400"
               autoFocus
               required
             />
-            <p className="text-2xs text-stone-400 mt-1">{t(lang, 'firstRunThing contextHint')}</p>
+            <p className="text-2xs text-stone-400 mt-1">{t(lang, 'firstRunJourneyHint')}</p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-              {t(lang, 'firstRunThingLabel')}
+              {t(lang, 'firstRunNodeLabel')}
             </label>
             <input
               type="text"
               value={nodeName}
               onChange={e => setThingName(e.target.value)}
-              placeholder={t(lang, 'firstRunThingPlaceholder')}
+              placeholder={t(lang, 'firstRunNodePlaceholder')}
               className="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400"
               required
             />
-            <p className="text-2xs text-stone-400 mt-1">{t(lang, 'firstRunThingHint')}</p>
+            <p className="text-2xs text-stone-400 mt-1">{t(lang, 'firstRunNodeHint')}</p>
           </div>
 
           <div>

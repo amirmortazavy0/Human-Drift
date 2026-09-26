@@ -14,6 +14,7 @@ import {
   Session,
   SessionEntry,
 } from '../src/types';
+import { formatLocalDateKey, formatSessionStatus } from '../src/utils/formatters';
 
 // Ollama Configuration
 let currentOllamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
@@ -389,10 +390,10 @@ export async function answerQueryChat(
     }
 
     return {
-      date: s.started_at?.substring(0, 10),
-      journey: j?.name || 'Unknown',
+      date: formatLocalDateKey(s.started_at),
+      thing: j?.name || 'Unknown',
       intention: s.intention,
-      status: s.status,
+      status: formatSessionStatus(s.status),
       quality: s.quality || 'Unrated',
       duration_minutes: durationMins,
       entry_types: entryTypes,
@@ -405,7 +406,7 @@ export async function answerQueryChat(
 Preserve honesty and direct facts. Calculate exact numbers, sums, and condition correlations.
 
 User's Data (Last 30 Days):
-Journeys Count: ${journeys.length} (${journeys.map((j) => j.name).join(', ')})
+Things Count: ${journeys.length} (${journeys.map((j) => j.name).join(', ')})
 Total Recent Sessions: ${recentSessions.length}
 Sessions Data:
 ${JSON.stringify(sessionsSummary, null, 2)}
@@ -476,7 +477,7 @@ Provide a clear, objective, well-formatted answer. If data is missing or zero, s
 
   if (recentSessions.length === 0) {
     return {
-      answer: `You have not logged any sessions yet in the last 30 days. You can begin logging in the **Log Chat** tab or start an active session in the **Tasks** view.`,
+      answer: `You have not logged any sessions yet in the last 30 days. You can begin logging in the **Quick Log** tab or start an active session in the **Things** view.`,
       provider: 'manual',
       sessions_analyzed: 0,
     };
@@ -495,23 +496,33 @@ Provide a clear, objective, well-formatted answer. If data is missing or zero, s
     const hours = (totalMins / 60).toFixed(1);
     calculatedAnswer = `In the last 30 days across ${recentSessions.length} recorded sessions, you logged approximately **${totalMins} minutes** (~**${hours} hours**) of work.`;
   } else if (/yesterday/i.test(qLower)) {
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
-    const ySessions = recentSessions.filter((s) => s.started_at?.startsWith(yesterday));
+    const yesterday = formatLocalDateKey(
+      new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+    );
+    const ySessions = recentSessions.filter((s) => formatLocalDateKey(s.started_at) === yesterday);
     if (ySessions.length === 0) {
       calculatedAnswer = `No sessions were logged yesterday (${yesterday}).`;
     } else {
-      calculatedAnswer = `Yesterday (${yesterday}), you logged **${ySessions.length} session(s)**:\n` +
-        ySessions.map((s) => `- **Intention**: "${s.intention}" (Status: ${s.status})`).join('\n');
+      calculatedAnswer =
+        `Yesterday (${yesterday}), you logged **${ySessions.length} session(s)**:\n` +
+        ySessions
+          .map((s) => `- **Intention**: "${s.intention}" (Status: ${formatSessionStatus(s.status)})`)
+          .join('\n');
     }
   } else if (/energy|focus|condition/i.test(qLower)) {
     const energyCounts: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0 };
     for (const e of recentEntries) {
-      if (e.condition?.energy) energyCounts[e.condition.energy] = (energyCounts[e.condition.energy] || 0) + 1;
+      if (e.condition?.energy)
+        energyCounts[e.condition.energy] = (energyCounts[e.condition.energy] || 0) + 1;
     }
     calculatedAnswer = `Across your recent entries, your energy distribution was:\n- **High**: ${energyCounts.HIGH} entries\n- **Medium**: ${energyCounts.MEDIUM} entries\n- **Low**: ${energyCounts.LOW} entries.`;
   } else {
-    calculatedAnswer = `Based on your last 30 days of data: You have **${recentSessions.length} logged sessions** and **${recentEntries.length} granular entries** across **${journeys.length} journey(s)**.\n\nRecent intentions include:\n` +
-      recentSessions.slice(-3).map((s) => `- "${s.intention}" (${s.started_at?.substring(0, 10)})`).join('\n');
+    calculatedAnswer =
+      `Based on your last 30 days of data: You have **${recentSessions.length} logged sessions** and **${recentEntries.length} granular entries** across **${journeys.length} Thing(s)**.\n\nRecent intentions include:\n` +
+      recentSessions
+        .slice(-3)
+        .map((s) => `- "${s.intention}" (${formatLocalDateKey(s.started_at)})`)
+        .join('\n');
   }
 
   return {

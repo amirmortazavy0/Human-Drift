@@ -1,66 +1,114 @@
-// Domain Model v1 — Authoritative Type Definitions for Human Drift R&D Work Logger
+// ==========================================
+// AUTHORITATIVE DOMAIN MODEL v1 — HUMAN DRIFT
+// ==========================================
 
 export type Visibility = 'PRIVATE' | 'SHARED';
 export type JourneyStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETE';
 
 export interface Journey {
-  id: string; // UUID
-  name: string; // "Train Commute", "R&D Work", "Learn Python"
+  id: string;
+  name: string;
   description?: string | null;
-  owner_id: string; // UUID
-  visibility: Visibility;
+  owner_id?: string;
+  visibility?: Visibility;
   status: JourneyStatus;
-  created_at: string; // ISO DateTime
+  created_at: string;
+  updated_at?: string;
   completed_at?: string | null;
 }
 
 export type NodeType = 'ROUTE' | 'STATION' | 'PROJECT' | 'TASK' | 'MILESTONE' | 'NOTE';
 export type NodeStatus = 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'DORMANT' | 'COMPLETE';
 export type DoneType = 'DELIVERABLE' | 'TIME_TARGET' | 'MILESTONE_SEQUENCE' | 'OPEN_ENDED';
-export type WorkType = 'DEVELOPMENT' | 'RESEARCH' | 'DESIGN' | 'WRITING' | 'ADMIN' | string;
 
 export interface Node {
-  id: string; // UUID
-  journey_id: string; // UUID
-  parent_id?: string | null; // null if top-level node in the journey
+  id: string;
+  journey_id: string;
+  parent_id?: string | null;
   node_type: NodeType;
   name: string;
   description?: string | null;
   status: NodeStatus;
-  sequence?: number | null; // only meaningful when parent.node_type = ROUTE
-  estimated_minutes?: number | null; // optional; set when user has basis to estimate
+  sequence?: number | null;
+  estimated_minutes?: number | null;
   done_type?: DoneType | null;
-  due_date?: string | null; // YYYY-MM-DD
-  created_at: string; // ISO DateTime
+  due_date?: string | null;
+  created_at: string;
+  updated_at?: string;
   completed_at?: string | null;
   note?: string | null;
 }
 
-export type SessionStatus = 'ACTIVE' | 'COMPLETE' | 'PAUSED' | 'INCOMPLETE';
-export type SessionQuality = 'POOR' | 'FAIR' | 'GOOD' | 'EXCELLENT';
+export const VALID_SESSION_STATUSES = [
+  'ACTIVE',
+  'COMPLETE',
+  'INCOMPLETE',
+  'ABANDONED',
+  'PAUSED',
+] as const;
+export type SessionStatus = (typeof VALID_SESSION_STATUSES)[number];
+
+// Authoritative Session Quality values per Domain Model v1
+export const VALID_SESSION_QUALITIES = ['POOR', 'FAIR', 'GOOD', 'EXCELLENT'] as const;
+export type SessionQuality = (typeof VALID_SESSION_QUALITIES)[number];
+
+// Coherent Session End Reasons bridging UI choices, domain persistence, and exports
+export const VALID_SESSION_END_REASONS = [
+  'NATURAL_COMPLETION',
+  'INTERRUPTED',
+  'DRIFTED',
+  'ENERGY_DEPLETED',
+  'JOURNEY_SWITCH',
+  'PAUSED',
+  'INCOMPLETE',
+] as const;
+export type SessionEndReason = (typeof VALID_SESSION_END_REASONS)[number];
 
 export interface Session {
-  id: string; // UUID
-  journey_id: string; // UUID
+  id: string;
+  journey_id: string;
+  node_id?: string | null;
   label?: string | null;
-  intention: string; // declared at session start; NEVER modified
-  started_at: string; // ISO DateTime
+  intention: string; // Locked at session start; NEVER modified
+  started_at: string;
   ended_at?: string | null;
   status: SessionStatus;
-  end_reason?: 'NATURAL_COMPLETION' | 'JOURNEY_SWITCH' | 'PAUSED' | 'INCOMPLETE' | string | null;
-  predecessor_session_id?: string | null; // Decision 2: Linked transition from prior session
-  successor_session_id?: string | null; // Decision 2: Linked transition to next session
-  reflection?: string | null; // logged at session end
+  end_reason?: SessionEndReason | null;
+  predecessor_session_id?: string | null;
+  successor_session_id?: string | null;
+  reflection?: string | null;
   quality?: SessionQuality | null;
   note?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type EnergyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
-export type FocusLevel = 'SCATTERED' | 'NORMAL' | 'DEEP';
-export type LocationType = 'HOME' | 'CAFE' | 'OFFICE' | 'TRANSIT' | 'OTHER';
-export type EnvironmentType = 'QUIET' | 'AMBIENT' | 'NOISY';
+export const VALID_ENTRY_TYPES = [
+  'TASK_STARTED',
+  'TASK_COMPLETED',
+  'TASK_PAUSED',
+  'CONTEXT_SWITCH',
+  'CONTEXT_SWITCH_REQUEST',
+  'MILESTONE_REACHED',
+  'DISCOVERY',
+  'INTENTION_REVISED',
+  'STOP_DEPARTED',
+  'STOP_ARRIVED',
+  'NOTE',
+] as const;
+export type EntryType = (typeof VALID_ENTRY_TYPES)[number];
+
+export const VALID_ENERGY_LEVELS = ['LOW', 'MEDIUM', 'HIGH'] as const;
+export type EnergyLevel = (typeof VALID_ENERGY_LEVELS)[number];
+
+export const VALID_FOCUS_LEVELS = ['SCATTERED', 'NORMAL', 'DEEP'] as const;
+export type FocusLevel = (typeof VALID_FOCUS_LEVELS)[number];
+
+export const VALID_LOCATION_TYPES = ['HOME', 'CAFE', 'OFFICE', 'TRANSIT', 'OTHER'] as const;
+export type LocationType = (typeof VALID_LOCATION_TYPES)[number];
+
+export const VALID_ENVIRONMENT_TYPES = ['QUIET', 'AMBIENT', 'NOISY'] as const;
+export type EnvironmentType = (typeof VALID_ENVIRONMENT_TYPES)[number];
 
 export interface Condition {
   energy: EnergyLevel;
@@ -70,63 +118,41 @@ export interface Condition {
   custom_note?: string | null;
 }
 
-export type EntryType =
-  | 'TASK_STARTED'
-  | 'TASK_COMPLETED'
-  | 'TASK_PAUSED'
-  | 'CONTEXT_SWITCH'
-  | 'CONTEXT_SWITCH_REQUEST'
-  | 'MILESTONE_REACHED'
-  | 'DISCOVERY'
-  | 'INTENTION_REVISED'
-  | 'STOP_DEPARTED'
-  | 'STOP_ARRIVED'
-  | 'NOTE';
-
 export interface SessionEntry {
-  id: string; // UUID
-  session_id: string; // UUID
-  node_id?: string | null; // null if not tied to a specific node
+  id: string;
+  session_id: string;
+  node_id?: string | null;
   entry_type: EntryType;
-  logged_at: string; // DateTime ISO
+  logged_at: string;
   note?: string | null;
-  condition: Condition; // snapshot at moment of this entry
-  discovery_ref?: string | null; // points to the new Node created if DISCOVERY
+  condition: Condition;
+  discovery_ref?: string | null;
 }
 
-// Decision 1: Unclassified context pauses as first-class intervals
-export interface SessionPauseInterval {
-  start: string; // ISO
-  end: string; // ISO
-  duration_minutes: number;
-  classification: 'UNCLASSIFIED_CONTEXT_PAUSE';
-}
-
-export interface SessionSummaryResult {
-  sessionDurationMinutes: number;
-  activeMinutes: number;
-  unclassifiedPauseMinutes: number;
-  pauseIntervals: SessionPauseInterval[];
-  entriesCount: number;
-  discoveriesCount: number;
-  revisionsCount: number;
-  touchedNodeIds: string[];
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  entity_type: 'JOURNEY' | 'NODE' | 'SESSION' | 'SESSIONENTRY' | 'CORRECTION' | 'CONFLICT';
+  entity_id: string;
+  action: string;
+  details: any;
+  previous_value?: any;
 }
 
 export interface EventLogEntry {
-  id: string; // UUID
+  id: string;
   entity_type: 'Journey' | 'Node' | 'Session' | 'SessionEntry';
   entity_id: string;
   event_type: string;
-  actor_id: string; // UUID
+  actor_id: string;
   payload: any;
   previous_value?: any | null;
-  occurred_at: string; // ISO DateTime
+  occurred_at: string;
 }
 
 export interface Correction {
-  id: string; // UUID
-  entry_id: string; // UUID
+  id: string;
+  entry_id: string;
   field: string;
   original_value: string;
   corrected_value: string;
@@ -144,8 +170,8 @@ export type ConflictType =
   | 'OTHER';
 
 export interface ConflictLog {
-  id: string; // UUID
-  session_id: string; // UUID
+  id: string;
+  session_id: string;
   conflict_type: ConflictType;
   description: string;
   resolved: boolean;
@@ -154,75 +180,95 @@ export interface ConflictLog {
   resolved_at?: string | null;
 }
 
-// Priority Query 1: Actual duration vs estimate
-export interface DurationVsEstimateResult {
-  node_id: string;
-  node_name: string;
-  node_type: NodeType;
-  status: NodeStatus;
-  estimated_minutes: number | null;
-  actual_minutes: number;
-  estimation_error_minutes: number | null; // actual - estimated
-  sessions_touched_count: number;
-}
-
-// Priority Query 2: Journey progress
-export interface JourneyProgressResult {
-  journey_id: string;
-  journey_name: string;
-  total_sessions: number;
-  completed_sessions: number;
-  active_sessions: number;
-  total_nodes: number;
-  nodes_by_status: Record<NodeStatus, number>;
-  nodes_completed_count: number;
-  nodes_started_count: number;
-  completion_rate: number; // completed / started
-  discoveries_count: number;
-  revisions_count: number;
-}
-
-// Four Canonical Views
-export type NavTab =
-  | 'LOG' // 1. Log
-  | 'QUERY' // 2. Query Chat
-  | 'TASKS' // 3. Task View
-  | 'DRIFT' // 4. Drift View
-  | 'BOARD' // compatibility alias
-  | 'FAST_LOG' // compatibility alias
-  | 'HIERARCHY' // compatibility alias
-  | 'SESSION' // compatibility alias
-  | 'HISTORY' // compatibility alias
-  | 'QUERIES' // compatibility alias
-  | 'AUDIT' // compatibility alias
-  | 'GUIDE'; // compatibility alias
-
-export interface OllamaStatus {
-  status: 'online' | 'offline';
-  url: string;
-  model: string;
-  available_models: string[];
-  provider: 'ollama' | 'gemini' | 'manual';
-}
-
-export interface QueryChatResponse {
-  answer: string;
-  provider: 'ollama' | 'gemini' | 'manual';
-  sessions_analyzed: number;
-}
-
-export interface BoardRecentEntry {
+export interface IntentionRevision {
   id: string;
   session_id: string;
+  entry_id: string;
+  previous_intention: string;
+  new_intention: string;
+  reason?: string | null;
+  revised_at: string;
+}
+
+export interface NodeEstimateHistory {
+  id: string;
+  node_id: string;
+  previous_estimated_minutes: number | null;
+  new_estimated_minutes: number | null;
+  changed_at: string;
+}
+
+export interface NodeClosure {
+  id: string;
+  node_id: string;
+  reason: string;
+  previous_status: NodeStatus;
+  closed_at: string;
+}
+
+export interface AppData {
+  journeys: Journey[];
+  nodes: Node[];
+  sessions: Session[];
+  session_entries: SessionEntry[];
+  audit_log: AuditLogEntry[];
+  // Backwards-compatible aliases
+  entries: SessionEntry[];
+  event_log: EventLogEntry[];
+  corrections: Correction[];
+  conflicts: ConflictLog[];
+  intention_revisions?: IntentionRevision[];
+  node_estimate_history?: NodeEstimateHistory[];
+  node_closures?: NodeClosure[];
+}
+
+// ==========================================
+// DAILY WORK LOGGER & AI PARSER TYPES
+// ==========================================
+
+export type WorkType = string;
+
+export interface ParsedLogProposal {
   journey_id: string;
-  journey_name: string;
+  journey_name?: string;
   node_id?: string | null;
-  node_name?: string | null;
-  entry_type: string;
-  logged_at: string;
-  note?: string | null;
-  duration_minutes?: number;
+  node_name: string;
+  is_new_node?: boolean;
+  node_status: NodeStatus;
+  work_type: string;
+  duration_minutes: number;
+  intention: string;
+  summary?: string;
+  entry_types?: EntryType[];
+  condition: Condition;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  provider: 'ollama' | 'gemini' | 'heuristic' | 'local_heuristic';
+  reasoning?: string;
+}
+
+export interface QuickLogPayload {
+  journey_id?: string;
+  node_id?: string | null;
+  node_name?: string;
+  node_status?: NodeStatus;
+  work_type?: string;
+  duration_minutes: number;
+  intention: string;
   condition?: Condition;
+  started_at?: string;
+  ended_at?: string;
+  quality?: SessionQuality | null;
+  end_reason?: SessionEndReason | null;
+  reflection?: string | null;
+  note?: string | null;
+  entry_types?: EntryType[];
+}
+
+export interface QuickLogResponse {
+  session: Session;
+  node?: Node | null;
+  entries?: SessionEntry[];
+  entry?: SessionEntry;
 }
 
 export interface BoardNodeItem {
@@ -235,19 +281,33 @@ export interface BoardNodeItem {
   node_type: NodeType;
   total_logged_minutes: number;
   session_count: number;
-  last_activity_at: string | null;
-  recent_sessions: Array<{
+  last_activity_at: string;
+  recent_sessions: {
     id: string;
     intention: string;
     duration_minutes: number;
     logged_at: string;
-  }>;
-  recent_logs: Array<{
+  }[];
+  recent_logs: {
     id: string;
     logged_at: string;
-    entry_type: string;
+    entry_type: EntryType;
     note: string | null;
-  }>;
+  }[];
+}
+
+export interface BoardRecentEntry {
+  id: string;
+  session_id: string;
+  journey_id: string;
+  journey_name: string;
+  node_id: string | null;
+  node_name: string | null;
+  entry_type: EntryType;
+  logged_at: string;
+  note: string;
+  duration_minutes?: number;
+  condition?: Condition;
 }
 
 export interface BoardData {
@@ -262,68 +322,78 @@ export interface BoardData {
   recent_entries: BoardRecentEntry[];
 }
 
-export interface ParsedLogProposal {
-  journey_id: string;
-  node_id: string | null;
+export interface OllamaStatus {
+  status: 'online' | 'offline';
+  reachable?: boolean;
+  url: string;
+  model: string;
+  model_name?: string;
+  available_models: string[];
+  provider: 'ollama' | 'manual';
+}
+
+export interface QueryChatResponse {
+  answer: string;
+  provider: 'ollama' | 'gemini' | 'deterministic' | 'manual';
+  sessions_analyzed: number;
+}
+
+export type NavTab =
+  | 'LOG'
+  | 'QUERY'
+  | 'ASK'
+  | 'TASKS'
+  | 'DRIFT'
+  | 'BOARD'
+  | 'HISTORY'
+  | 'FAST_LOG'
+  | 'GUIDE'
+  | 'HIERARCHY'
+  | 'SESSION'
+  | 'QUERIES'
+  | 'AUDIT';
+
+// Priority Query Result Types (Prototype Spec v1)
+export interface DurationVsEstimateResult {
+  node_id: string;
   node_name: string;
-  node_status: 'ACTIVE' | 'COMPLETE' | 'PLANNED' | 'PAUSED';
-  work_type: 'DEVELOPMENT' | 'RESEARCH' | 'DESIGN' | 'WRITING' | 'ADMIN';
-  duration_minutes: number;
-  intention: string;
-  reasoning: string;
-  provider: 'ollama' | 'gemini' | 'local_heuristic';
-  condition?: Condition;
-  entry_types?: EntryType[];
+  node_type: NodeType;
+  status: NodeStatus;
+  estimated_minutes: number | null;
+  actual_minutes: number;
+  estimation_error_minutes: number | null;
+  sessions_touched_count: number;
 }
 
-export interface QuickLogPayload {
+export interface JourneyProgressResult {
   journey_id: string;
-  node_id?: string | null;
-  node_name: string;
-  node_status: 'ACTIVE' | 'COMPLETE' | 'PLANNED' | 'PAUSED';
-  work_type: string;
+  journey_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  active_sessions: number;
+  total_nodes: number;
+  nodes_by_status: Record<NodeStatus, number>;
+  nodes_completed_count: number;
+  nodes_started_count: number;
+  completion_rate: number;
+  discoveries_count: number;
+  revisions_count: number;
+}
+
+export interface SessionPauseInterval {
+  start: string;
+  end: string;
   duration_minutes: number;
-  intention: string;
-  condition?: Partial<Condition>;
-  started_at?: string;
-  ended_at?: string;
-  quality?: 'DEEP_FLOW' | 'PRODUCTIVE' | 'DISTRACTED' | 'STRUGGLING';
-  reflection?: string;
+  classification: 'UNCLASSIFIED_CONTEXT_PAUSE';
 }
 
-export interface QuickLogResponse {
-  success: boolean;
-  session: Session;
-  node?: Node;
-  entry: SessionEntry;
-  board: BoardData;
-}
-
-export interface AuditLogEntry {
-  id: string; // UUID
-  timestamp: string; // ISO 8601
-  entity_type: 'JOURNEY' | 'NODE' | 'SESSION' | 'SESSION_ENTRY';
-  entity_id: string;
-  action: 'CREATE' | 'UPDATE' | 'CORRECTION' | 'INTENTION_REVISED' | 'STATUS_CHANGE';
-  details: any;
-  previous_value?: any | null;
-}
-
-export interface AppData {
-  version: string;
-  created_at: string;
-  journeys: Journey[];
-  nodes: Node[];
-  sessions: Session[];
-  session_entries: SessionEntry[];
-  audit_log: AuditLogEntry[];
-  // Compatibility aliases
-  entries?: SessionEntry[];
-  event_log?: EventLogEntry[];
-  corrections?: Correction[];
-  conflicts?: ConflictLog[];
-  routes?: any[];
-  schedules?: any[];
-  rest_days?: any[];
-  target_program_days?: number;
+export interface SessionSummaryResult {
+  sessionDurationMinutes: number;
+  activeMinutes: number;
+  unclassifiedPauseMinutes: number;
+  pauseIntervals: SessionPauseInterval[];
+  entriesCount: number;
+  discoveriesCount: number;
+  revisionsCount: number;
+  touchedNodeIds: string[];
 }

@@ -20,7 +20,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { BoardData, BoardNodeItem, Journey, NodeStatus } from '../types';
-import { updateNode } from '../api';
+import { getBoard, updateNode } from '../api';
 import {
   formatEntryType,
   formatLocalDateTime,
@@ -31,8 +31,8 @@ import {
 interface BoardViewProps {
   boardData: BoardData | null;
   journeys: Journey[];
-  selectedContext: Journey | null;
-  onSelectContext: (journey: Journey | null) => void;
+  selectedJourney: Journey | null;
+  onSelectJourney: (journey: Journey | null) => void;
   onRefresh: () => Promise<void>;
   onQuickLogForNode?: (nodeName: string) => void;
   onOpenNewNodeModal?: () => void;

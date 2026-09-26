@@ -1,12 +1,33 @@
-import { AppData, BoardData, BoardNodeItem, BoardRecentEntry, Node, Session, SessionEntry } from '../src/types';
+import {
+  AppData,
+  BoardData,
+  BoardNodeItem,
+  BoardRecentEntry,
+  Session,
+  SessionEntry,
+} from '../src/types';
+import { calculateNodeActiveMinutes, calculateSessionNodeDurations } from './queries';
 
 export type { BoardNodeItem, BoardData };
 
-export function computeBoardData(data: AppData, targetJourneyId?: string): BoardData {
+/**
+ * Computes Board view state (columns, per-node durations, total active minutes, recent entries).
+ *
+ * Duration calculation rules:
+ * - Each Node's `total_logged_minutes` is derived strictly from recorded SessionEntry boundaries
+ *   for that specific Node via `calculateNodeActiveMinutes` / `calculateSessionNodeDurations`.
+ * - A multi-Node Session's total duration is never duplicated across every Node touched.
+ * - Sessions or Nodes with no entries receive 0 minutes (no synthetic 30-minute fallback).
+ */
+export function computeBoardData(
+  data: AppData,
+  targetJourneyId?: string,
+  now: Date = new Date()
+): BoardData {
   const isAll = !targetJourneyId || targetJourneyId === 'ALL';
 
   const filteredNodes = isAll
-    ? (data.nodes || [])
+    ? data.nodes || []
     : (data.nodes || []).filter((n) => n.journey_id === targetJourneyId);
 
   const entries: SessionEntry[] = Array.from(
@@ -26,23 +47,27 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
   const journeysById = new Map(journeys.map((j) => [j.id, j]));
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
 
-  // Pre-calculate per-session duration
-  const sessionDurations = new Map<string, number>();
-  for (const s of sessions) {
-    if (s.started_at && s.ended_at) {
-      const ms = new Date(s.ended_at).getTime() - new Date(s.started_at).getTime();
-      const mins = Math.round(ms / 60000);
-      sessionDurations.set(s.id, isNaN(mins) || mins < 1 ? 1 : mins);
-    } else {
-      sessionDurations.set(s.id, 30);
+  // Group entries by session for per-session-per-node duration lookup
+  const entriesBySession = new Map<string, SessionEntry[]>();
+  for (const e of entries) {
+    if (!e.session_id) continue;
+    if (!entriesBySession.has(e.session_id)) {
+      entriesBySession.set(e.session_id, []);
     }
+    entriesBySession.get(e.session_id)!.push(e);
+  }
+
+  const sessionNodeDurationsMap = new Map<string, Map<string, number>>();
+  for (const s of sessions) {
+    const sEntries = entriesBySession.get(s.id) || [];
+    sessionNodeDurationsMap.set(s.id, calculateSessionNodeDurations(s, sEntries, now));
   }
 
   // Index entries by resolved node_id
   const entriesByNode = new Map<string, SessionEntry[]>();
   for (const entry of entries) {
     const s = entry.session_id ? sessionsById.get(entry.session_id) : null;
-    const resolvedNodeId = entry.node_id || (s as any)?.node_id || null;
+    const resolvedNodeId = entry.node_id || s?.node_id || null;
     if (resolvedNodeId) {
       if (!entriesByNode.has(resolvedNodeId)) {
         entriesByNode.set(resolvedNodeId, []);
@@ -54,17 +79,17 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
   let grandTotalMinutes = 0;
 
   const nodeItems: BoardNodeItem[] = filteredNodes.map((node) => {
-    const nodeEntries = entriesByNode.get(node.id) || [];
-    nodeEntries.sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime());
+    const nodeEntries = [...(entriesByNode.get(node.id) || [])].sort(
+      (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
+    );
 
-    // Calculate unique session ids
-    const sessionIds = new Set<string>();
-    for (const e of nodeEntries) {
-      if (e.session_id) sessionIds.add(e.session_id);
-    }
+    const { activeMinutes, sessionIds, perSessionMinutes } = calculateNodeActiveMinutes(
+      node.id,
+      entries,
+      sessions,
+      now
+    );
 
-    // Sum duration across sessions associated with this node
-    let totalMinutes = 0;
     const recentSessions: BoardNodeItem['recent_sessions'] = [];
     const recentLogs: BoardNodeItem['recent_logs'] = nodeEntries.slice(0, 5).map((entry) => ({
       id: entry.id,
@@ -79,20 +104,19 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
       seenSessions.add(entry.session_id);
 
       const s = sessionsById.get(entry.session_id);
-      const dur = sessionDurations.get(entry.session_id) || 30;
-      totalMinutes += dur;
+      const nodeDurInSession = perSessionMinutes.get(entry.session_id) ?? 0;
 
       if (recentSessions.length < 4) {
         recentSessions.push({
           id: entry.session_id,
           intention: s?.intention || entry.note || 'Logged work',
-          duration_minutes: dur,
+          duration_minutes: nodeDurInSession,
           logged_at: entry.logged_at,
         });
       }
     }
 
-    grandTotalMinutes += totalMinutes;
+    grandTotalMinutes += activeMinutes;
 
     return {
       id: node.id,
@@ -102,7 +126,7 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
       description: node.description,
       status: node.status,
       node_type: node.node_type,
-      total_logged_minutes: totalMinutes,
+      total_logged_minutes: activeMinutes,
       session_count: sessionIds.size,
       last_activity_at: nodeEntries[0]?.logged_at || node.created_at,
       recent_sessions: recentSessions,
@@ -153,9 +177,14 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
 
   const recent_entries: BoardRecentEntry[] = filteredEntries.slice(0, 50).map((e) => {
     const s = e.session_id ? sessionsById.get(e.session_id) : null;
-    const n = e.node_id ? nodesById.get(e.node_id) : (s as any)?.node_id ? nodesById.get((s as any).node_id) : null;
+    const resolvedNodeId = e.node_id || s?.node_id || null;
+    const n = resolvedNodeId ? nodesById.get(resolvedNodeId) : null;
     const jId = s?.journey_id || n?.journey_id || '';
     const j = journeysById.get(jId);
+
+    const perNodeMap = e.session_id ? sessionNodeDurationsMap.get(e.session_id) : undefined;
+    const nodeDuration =
+      resolvedNodeId && perNodeMap ? perNodeMap.get(resolvedNodeId) : undefined;
 
     return {
       id: e.id,
@@ -167,7 +196,7 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
       entry_type: e.entry_type,
       logged_at: e.logged_at,
       note: e.note || s?.intention || 'Logged activity',
-      duration_minutes: s ? sessionDurations.get(s.id) : undefined,
+      duration_minutes: nodeDuration,
       condition: e.condition,
     };
   });
@@ -175,7 +204,7 @@ export function computeBoardData(data: AppData, targetJourneyId?: string): Board
   return {
     columns,
     total_nodes: nodeItems.length,
-    total_active_minutes: grandTotalMinutes,
+    total_active_minutes: Math.round(grandTotalMinutes * 10) / 10,
     recent_entries,
   };
 }

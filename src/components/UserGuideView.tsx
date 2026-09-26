@@ -34,7 +34,7 @@ const content = {
       quote: "You declare what you intend to do. You log what actually happens. The system preserves both — and the gap between them — without ever rewriting history.",
       navTitle: 'Five views in the app',
     },
-    firstThing context: {
+    firstJourney: {
       title: 'Set up your work',
       body: 'Before you can log a session, you need a Thing context and at least one Thing inside it.',
       steps: [
@@ -114,7 +114,7 @@ const content = {
       quote: 'اعلام می‌کنید چه قصدی دارید. ثبت می‌کنید چه اتفاقی افتاد. سیستم هر دو را — و فاصله بینشان را — بدون هیچ بازنویسی حفظ می‌کند.',
       navTitle: 'پنج بخش اپ',
     },
-    firstThing context: {
+    firstJourney: {
       title: 'راه‌اندازی کار',
       body: 'پیش از ثبت جلسه، به یک سفر و حداقل یک مورد داخل آن نیاز دارید.',
       steps: [
@@ -193,7 +193,7 @@ const Concept: React.FC<ConceptProps> = ({ term, body }) => {
   );
 };
 
-interface NavCardProps { icon: React.ReactThing; label: string; description: string; tab: NavTab; onNavigate: (tab: NavTab) => void }
+interface NavCardProps { icon: React.ReactNode; label: string; description: string; tab: NavTab; onNavigate: (tab: NavTab) => void }
 const NavCard: React.FC<NavCardProps> = ({ icon, label, description, tab, onNavigate }) => (
   <button onClick={() => onNavigate(tab)} className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 bg-white hover:border-stone-400 transition-all text-left w-full cursor-pointer group">
     <div className="p-2 rounded-lg bg-stone-100 text-stone-700 group-hover:bg-stone-900 group-hover:text-white transition-colors shrink-0">{icon}</div>
@@ -284,7 +284,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ lang, onNavigateTa
           </div>
         </>); })()}
 
-        {step === 'FIRST_JOURNEY' && (() => { const d = c.firstThing context; return (<>
+        {step === 'FIRST_JOURNEY' && (() => { const d = c.firstJourney; return (<>
           <div><h3 className="text-base font-bold text-stone-900 mb-1">{d.title}</h3><p className="text-xs text-stone-600 leading-relaxed">{d.body}</p></div>
           <div className="space-y-3">
             {d.steps.map((s, i) => (

@@ -10,7 +10,7 @@ export const strings = {
     // App shell
     appName: 'Human Drift',
     loading: 'Loading…',
-    noThing contextSelected: 'No journey selected',
+    noJourneySelected: 'No journey selected',
 
     // Nav tabs
     board: 'Board',
@@ -25,8 +25,8 @@ export const strings = {
     // Header
     startSession: 'Start Tracking',
     activeSession: 'Active',
-    newThing context: 'New Thing',
-    switchThing context: 'Switch Thing context',
+    newJourney: 'New Thing',
+    switchJourney: 'Switch Thing context',
 
     // Thing context / node tree
     journeyStarted: 'Started',
@@ -36,7 +36,7 @@ export const strings = {
     startSessionHere: 'Start Tracking on this Thing',
 
     // Thing context create modal
-    createThing context: 'New Thing',
+    createJourney: 'New Thing',
     journeyNameLabel: 'Thing context name',
     journeyNamePlaceholder: 'e.g. R&D Work, Learn Python',
     journeyDescLabel: 'Description (optional)',
@@ -47,9 +47,9 @@ export const strings = {
     // First run
     firstRunTitle: 'What are you working on?',
     firstRunSubtitle: 'Start with the most immediate thing. You can add more later.',
-    firstRunThing contextLabel: 'Name this context',
-    firstRunThing contextPlaceholder: 'e.g. R&D Work, Learn Python, IG Research',
-    firstRunThing contextHint: 'This becomes your Thing context — the long-lived container for related work.',
+    firstRunJourneyLabel: 'Name this context',
+    firstRunJourneyPlaceholder: 'e.g. R&D Work, Learn Python, IG Research',
+    firstRunJourneyHint: 'This becomes your Thing context — the long-lived container for related work.',
     firstRunNodeLabel: 'First thing to work on',
     firstRunNodePlaceholder: 'e.g. Research competitors, Write domain model',
     firstRunNodeHint: 'You can break this into subtasks once inside.',
@@ -73,7 +73,7 @@ export const strings = {
     // App shell
     appName: 'Human Drift',
     loading: 'در حال بارگذاری…',
-    noThing contextSelected: 'سفری انتخاب نشده',
+    noJourneySelected: 'سفری انتخاب نشده',
 
     // Nav tabs
     board: 'بُرد',
@@ -88,8 +88,8 @@ export const strings = {
     // Header
     startSession: 'شروع جلسه',
     activeSession: 'جلسه فعال',
-    newThing context: 'سفر جدید',
-    switchThing context: 'تغییر سفر',
+    newJourney: 'سفر جدید',
+    switchJourney: 'تغییر سفر',
 
     // Thing context / node tree
     journeyStarted: 'شروع',
@@ -99,7 +99,7 @@ export const strings = {
     startSessionHere: 'شروع جلسه روی این مورد',
 
     // Thing context create modal
-    createThing context: 'سفر جدید',
+    createJourney: 'سفر جدید',
     journeyNameLabel: 'نام سفر',
     journeyNamePlaceholder: 'مثلاً: کار تحقیقاتی، یادگیری Python',
     journeyDescLabel: 'توضیح (اختیاری)',
@@ -110,9 +110,9 @@ export const strings = {
     // First run
     firstRunTitle: 'روی چه چیزی کار می‌کنید؟',
     firstRunSubtitle: 'با فوری‌ترین کار شروع کنید. بعداً می‌توانید موارد دیگر اضافه کنید.',
-    firstRunThing contextLabel: 'نام این زمینه',
-    firstRunThing contextPlaceholder: 'مثلاً: تحقیق اینستاگرام، یادگیری پایتون',
-    firstRunThing contextHint: 'این سفر شما می‌شود — ظرف بلندمدت برای کارهای مرتبط.',
+    firstRunJourneyLabel: 'نام این زمینه',
+    firstRunJourneyPlaceholder: 'مثلاً: تحقیق اینستاگرام، یادگیری پایتون',
+    firstRunJourneyHint: 'این سفر شما می‌شود — ظرف بلندمدت برای کارهای مرتبط.',
     firstRunNodeLabel: 'اولین کاری که می‌خواهید انجام دهید',
     firstRunNodePlaceholder: 'مثلاً: تحقیق درباره رقبا، نوشتن مدل دامنه',
     firstRunNodeHint: 'بعد از ورود می‌توانید این را به وظایف کوچک‌تر تقسیم کنید.',

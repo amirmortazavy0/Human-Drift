@@ -238,15 +238,20 @@ export async function createSession(payload: {
   intention: string;
   label?: string | null;
   initial_node_id?: string | null;
+  node_id?: string | null;
   condition?: import('./types').Condition | null;
   predecessor_session_id?: string | null;
+  started_at?: string | null;
 }): Promise<{ session: Session; conflict?: ConflictLog | null }> {
   const res = await apiFetch(`${API_BASE}/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Failed to create session: ${res.statusText}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to create session: ${res.statusText}`);
+  }
   return res.json();
 }
 
@@ -256,13 +261,16 @@ export async function startSession(payload: {
   label?: string | null;
   node_id?: string | null;
   condition?: import('./types').Condition | null;
+  started_at?: string | null;
 }): Promise<Session> {
   const res = await createSession({
     journey_id: payload.journey_id,
     intention: payload.intention,
     label: payload.label,
     initial_node_id: payload.node_id,
+    node_id: payload.node_id,
     condition: payload.condition,
+    started_at: payload.started_at,
   });
   return res.session;
 }
@@ -284,8 +292,8 @@ export async function endSession(
   payload: {
     reflection?: string | null;
     quality?: import('./types').SessionQuality | null;
-    status?: 'COMPLETE' | 'INCOMPLETE' | 'ABANDONED';
-    end_reason?: 'NATURAL_COMPLETION' | 'JOURNEY_SWITCH' | 'ABANDONED' | 'PAUSED' | string | null;
+    status?: import('./types').SessionStatus;
+    end_reason?: import('./types').SessionEndReason | string | null;
     successor_session_id?: string | null;
     note?: string | null;
   }
@@ -295,7 +303,10 @@ export async function endSession(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Failed to end session: ${res.statusText}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to end session: ${res.statusText}`);
+  }
   return res.json();
 }
 
@@ -304,15 +315,38 @@ export async function completeSession(
   payload: {
     reflection?: string | null;
     quality?: import('./types').SessionQuality | null;
-    end_reason?: string | null;
+    end_reason?: import('./types').SessionEndReason | string | null;
+    status?: import('./types').SessionStatus;
   }
 ): Promise<Session> {
   return endSession(id, {
     reflection: payload.reflection,
     quality: payload.quality,
-    status: 'COMPLETE',
-    end_reason: (payload.end_reason as any) || 'NATURAL_COMPLETION',
+    status: payload.status,
+    end_reason: payload.end_reason || 'NATURAL_COMPLETION',
   });
+}
+
+export async function updateSessionCondition(
+  sessionId: string,
+  condition: import('./types').Condition,
+  nodeId?: string | null,
+  note?: string | null
+): Promise<{
+  session: Session;
+  entry: SessionEntry;
+  condition: import('./types').Condition;
+}> {
+  const res = await apiFetch(`${API_BASE}/sessions/${sessionId}/condition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ condition, node_id: nodeId, note }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to update condition: ${res.statusText}`);
+  }
+  return res.json();
 }
 
 // Decision 2: Cross-Journey Session Transition
